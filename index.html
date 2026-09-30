@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trains</title>
+<meta name="theme-color" content="#0c1020">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600&family=Doto:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1020;
+    --ink: #eef1f8;
+    --muted: #9aa3bd;
+    --glass: rgba(255,255,255,0.055);
+    --glass-2: rgba(255,255,255,0.09);
+    --edge: rgba(255,255,255,0.11);
+    --accent: #8fb3ff;
+    --tomato: #e8875f;
+    --gold: #e9c46a;
+    --orb-a: #2a4596;
+    --orb-b: #b4532a;
+    --orb-c: #6a5acd;
+    --shadow: 0 20px 60px -30px rgba(0,0,0,0.8);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3f5fa;
+      --ink: #171c2e;
+      --muted: #5b6480;
+      --glass: rgba(255,255,255,0.55);
+      --glass-2: rgba(255,255,255,0.8);
+      --edge: rgba(23,28,46,0.1);
+      --accent: #2f55b8;
+      --tomato: #b4532a;
+      --gold: #a07a14;
+      --orb-a: #a9c2f5;
+      --orb-b: #f2b38f;
+      --orb-c: #b9b0f0;
+      --shadow: 0 20px 50px -30px rgba(23,28,46,0.35);
+      color-scheme: light;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Work Sans", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    overflow-x: hidden;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  /* drifting colour orbs */
+  .sky { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.55; will-change: transform; }
+  .orb.a { width: 520px; height: 520px; background: var(--orb-a); top: -140px; left: -120px; animation: drift1 26s ease-in-out infinite alternate; }
+  .orb.b { width: 440px; height: 440px; background: var(--orb-b); bottom: -160px; right: -100px; animation: drift2 32s ease-in-out infinite alternate; }
+  .orb.c { width: 360px; height: 360px; background: var(--orb-c); top: 40%; left: 55%; opacity: 0.3; animation: drift3 38s ease-in-out infinite alternate; }
+  @keyframes drift1 { to { transform: translate(180px, 120px) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(-200px, -140px) scale(1.1); } }
+  @keyframes drift3 { to { transform: translate(-260px, 80px) scale(0.9); } }
+  .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .wrap { position: relative; z-index: 2; max-width: 1040px; margin: 0 auto; padding: 56px 20px 48px; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 56px; }
+  .mark { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .mark svg { width: 30px; height: 30px; }
+  .top-print { color: var(--muted); font-size: 0.9rem; font-weight: 600; text-decoration: none; padding: 4px 12px; border: 1px solid var(--edge); border-radius: 999px; }
+  .top-print:hover { color: var(--ink); }
+  @media print { .top-print { display: none; } }
+  .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.95rem; }
+
+  .hero { margin-bottom: 48px; }
+  .hello { color: var(--accent); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.8rem; margin: 0 0 14px; }
+  h1 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 700;
+    font-size: clamp(3rem, 11vw, 7.5rem); line-height: 0.92; letter-spacing: -0.03em; margin: 0;
+  }
+  h1 em { font-style: italic; font-weight: 500;
+    background: linear-gradient(100deg, var(--accent), var(--gold) 55%, var(--tomato));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .date { margin: 18px 0 0; font-size: 1.1rem; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+  .card {
+    position: relative; border-radius: 22px; padding: 24px;
+    background: var(--glass); border: 1px solid var(--edge);
+    backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--shadow); color: inherit; text-decoration: none;
+    transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+  }
+  a.card:hover, a.card:focus-visible { transform: translateY(-4px); background: var(--glass-2); border-color: color-mix(in srgb, var(--accent) 45%, var(--edge)); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+  .tonight { grid-column: span 4; min-height: 240px; display: flex; flex-direction: column; }
+  .tonight h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: clamp(1.5rem, 3.4vw, 2.2rem); line-height: 1.15; margin: 0; text-wrap: balance; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  .split h2 { font-size: clamp(1.15rem, 2.4vw, 1.45rem); }
+  .who { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; margin-bottom: 8px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .who.adults { background: color-mix(in srgb, var(--tomato) 18%, transparent); color: var(--tomato); }
+  .tomorrow { margin-top: auto; padding-top: 18px; color: var(--muted); font-size: 0.9rem; }
+  .tomorrow b { color: var(--ink); font-weight: 500; }
+
+  .dinner { grid-column: span 2; display: flex; flex-direction: column; justify-content: space-between; min-height: 240px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--gold) 14%, transparent)), var(--glass); }
+  .dinner .big { font-family: "Fraunces", Georgia, serif; font-size: 1.9rem; font-weight: 700; line-height: 1.05; margin: 0; }
+  .dinner .sub { color: var(--muted); margin: 8px 0 0; font-size: 0.92rem; }
+  .arrow { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%;
+    background: var(--ink); color: var(--bg); font-size: 1.3rem; transition: transform 0.25s ease; align-self: flex-end; }
+  a.card:hover .arrow { transform: rotate(-45deg); }
+
+  .small { grid-column: span 2; display: flex; gap: 14px; align-items: flex-start; }
+  .icon { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--glass-2); border: 1px solid var(--edge); }
+  .icon svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .small h3 { margin: 0 0 2px; font-size: 1.02rem; font-weight: 600; }
+  .small p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+  .weather { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 1.2fr); gap: 28px; align-items: start;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--orb-c) 22%, transparent), transparent 60%), var(--glass); }
+  .wx-main { display: flex; align-items: center; gap: 14px; }
+  .wx-temp { font-family: "Fraunces", Georgia, serif; font-size: 4.2rem; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .wx-desc { margin: 10px 0 2px; font-weight: 600; }
+  .wx-meta { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .wx-ico { display: inline-flex; width: 28px; height: 28px; flex: none; }
+  .wx-ico.big { width: 58px; height: 58px; }
+  .wx-ico svg { width: 100%; height: 100%; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .wx-ico .sun { stroke: var(--gold); } .wx-ico .cloud { stroke: var(--ink); } .wx-ico .rain { stroke: #7fb2e5; } .wx-ico .moon { stroke: var(--muted); }
+  .wx-hours { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; text-align: center; padding-top: 26px; }
+  .wx-h { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wx-h b { color: var(--ink); font-size: 1rem; font-weight: 600; }
+  .wx-rain { color: #7fb2e5; font-size: 0.72rem; min-height: 1em; }
+  .wx-days { display: grid; gap: 4px; padding-top: 18px; }
+  .wx-d { display: grid; grid-template-columns: 44px 28px 1fr auto; align-items: center; gap: 10px; font-size: 0.88rem; font-variant-numeric: tabular-nums; padding: 3px 0; }
+  .wx-d .day { font-weight: 600; }
+  .wx-d .rng { color: var(--muted); text-align: right; }
+  .wx-d .rng b { color: var(--ink); font-weight: 600; }
+  .wx-d .wx-rain { text-align: left; }
+  @media (max-width: 900px) { .weather { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); } .wx-days { grid-column: span 2; grid-template-columns: repeat(5, minmax(0,1fr)); padding-top: 0; }
+    .wx-d { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 4px; } .wx-d .rng, .wx-d .wx-rain { text-align: center; } }
+  @media (max-width: 560px) { .weather { grid-template-columns: minmax(0, 1fr); gap: 18px; } .wx-days { grid-column: auto; } .wx-hours { padding-top: 0; } }
+
+  .trains { grid-column: span 6; }
+  .tr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tr-head h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 0; }
+  .tr-switch { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--glass-2); border: 1px solid var(--edge); }
+  .tr-switch button { font: inherit; font-size: 0.84rem; font-weight: 600; border: 0; cursor: pointer; padding: 6px 14px; border-radius: 999px; background: transparent; color: var(--muted); }
+  .tr-switch button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+  .tr-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tr-list { display: grid; }
+  .tr-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 70px 110px 64px; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--edge); font-variant-numeric: tabular-nums; }
+  .tr-row.hdr { border-top: 0; padding-top: 0; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tr-row.hdr span { font-size: inherit; }
+  .tr-dep { font-size: 1.15rem; font-weight: 600; }
+  .tr-dep s { color: var(--muted); font-weight: 400; font-size: 0.85rem; margin-right: 4px; }
+  .tr-to { color: var(--muted); font-size: 0.88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-to b { color: var(--ink); font-weight: 600; }
+  .tr-plat { font-size: 0.9rem; }
+  .tr-st { justify-self: end; font-size: 0.76rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+    background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .tr-st.late { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
+  .tr-st.bad { background: color-mix(in srgb, var(--tomato) 22%, transparent); color: var(--tomato); }
+  .tr-row.cancelled .tr-dep, .tr-row.cancelled .tr-to b { text-decoration: line-through; color: var(--muted); }
+  .tr-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 0.85rem; background: color-mix(in srgb, var(--gold) 14%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); }
+  .tr-empty { margin: 6px 0; color: var(--muted); }
+  .tr-trk { justify-self: end; font: inherit; font-size: 0.74rem; font-weight: 600; cursor: pointer; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--edge); background: transparent; color: var(--ink); }
+  .tr-trk:hover, .tr-trk[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .trk { margin: 0 0 16px; padding: 16px 18px; border-radius: 16px; background: var(--glass-2); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--edge)); }
+  .trk-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .trk-top .label { margin-bottom: 4px; }
+  .trk-now { font-family: "Fraunces", Georgia, serif; font-size: 1.25rem; font-weight: 600; line-height: 1.25; margin: 0; }
+  .trk-sub { margin: 4px 0 0; color: var(--muted); font-size: 0.88rem; }
+  .trk-sub b { color: var(--ink); font-weight: 600; }
+  .trk-sub .late { color: var(--gold); } .trk-sub .bad { color: var(--tomato); }
+  .trk-stop { font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid var(--edge); background: transparent; color: var(--muted); border-radius: 999px; padding: 5px 12px; white-space: nowrap; }
+  .trk-stop:hover { color: var(--ink); }
+  .trk-line { list-style: none; margin: 14px 0 0; padding: 0; display: grid; }
+  .trk-line li { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+  .trk-line li::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--edge); }
+  .trk-line li:first-child::before { top: 50%; } .trk-line li:last-child::before { bottom: 50%; }
+  .trk-line li.done::before { background: var(--accent); }
+  .trk-dot { position: relative; z-index: 1; width: 12px; height: 12px; margin-left: 3px; border-radius: 50%; border: 2px solid var(--muted); background: var(--bg); }
+  .trk-line li.done .trk-dot { background: var(--accent); border-color: var(--accent); }
+  .trk-line li.next .trk-dot { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .trk-line li.done .trk-name { color: var(--muted); }
+  .trk-line li.dest .trk-name { font-weight: 700; }
+  .trk-line li.before .trk-name, .trk-line li.before .trk-t { opacity: 0.5; }
+  .trk-line li.boarding .trk-name { font-weight: 700; }
+  .trk-you { font-style: normal; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); margin-left: 6px; }
+  .trk-t { color: var(--muted); font-size: 0.8rem; text-align: right; }
+  .trk-t b { color: var(--ink); font-weight: 600; } .trk-t .late { color: var(--gold); }
+  .tr-foot { margin: 10px 0 0; font-size: 0.76rem; color: var(--muted); }
+  @media (max-width: 560px) {
+    .tr-row { grid-template-columns: 58px minmax(0, 1fr) auto auto; gap: 8px; }
+    .tr-row .tr-plat { display: none; }
+  }
+
+  .board-card { grid-column: span 6; }
+  /* Station board: amber dot-matrix on black, like the displays on the platform */
+  .board { --amber: #ffb000; background: #050505; border-radius: 12px; padding: 14px 16px 10px; border: 1px solid #222;
+    font-family: "Doto", ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 900; color: var(--amber);
+    text-shadow: 0 0 6px rgba(255, 176, 0, 0.45); letter-spacing: 0.02em; overflow: hidden; }
+  .bd-row { display: grid; grid-template-columns: 5.2ch minmax(0, 1fr) 4ch 9ch; gap: 12px; align-items: baseline; padding: 4px 0; font-size: 1.12rem; line-height: 1.3; }
+  .bd-row.hd { font-size: 0.78rem; opacity: 0.75; padding-bottom: 6px; }
+  .bd-where { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .bd-plat { text-align: center; }
+  .bd-exp { text-align: right; white-space: nowrap; }
+  .bd-short { display: none; }
+  /* Names too long for their column slide across to show the rest, then back */
+  .pan { text-overflow: clip !important; }
+  .pan > .pan-in { display: inline-block; animation: pan var(--pan-dur, 6s) ease-in-out 1.5s infinite alternate; }
+  @keyframes pan { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(var(--pan-by)); } }
+  @media (prefers-reduced-motion: reduce) { .pan > .pan-in { animation: none; } .pan { text-overflow: ellipsis !important; } }
+  @media print { .pan > .pan-in { animation: none !important; } }
+  .bd-late { color: #ffd766; } .bd-bad { color: #ff6a3d; text-shadow: 0 0 6px rgba(255, 106, 61, 0.5); }
+  .bd-calling { font-size: 0.9rem; opacity: 0.9; overflow: hidden; white-space: nowrap; padding: 0 0 6px 5.2ch; margin-left: 12px; }
+  .bd-calling span, .bd-tick { display: inline-block; padding-left: 100%; animation: bd-scroll var(--bd-dur, 20s) linear infinite; }
+  @keyframes bd-scroll { to { transform: translateX(-100%); } }
+  .bd-foot { display: flex; gap: 14px; justify-content: space-between; align-items: baseline; border-top: 1px solid #1e1e1e; margin-top: 8px; padding-top: 8px; font-size: 0.9rem; }
+  .bd-clock { font-size: 1.35rem; }
+  .bd-msg { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 0.85rem; opacity: 0.85; }
+  @media (prefers-reduced-motion: reduce) { .bd-calling span, .bd-tick { animation: none; padding-left: 0; white-space: normal; } .bd-msg { white-space: normal; } }
+  @media (max-width: 560px) {
+    .board { padding: 12px 12px 8px; }
+    .bd-row { grid-template-columns: 4.8ch minmax(0, 1fr) 2.6ch 9ch; gap: 6px; font-size: 0.9rem; }
+    .bd-row.hd { font-size: 0.7rem; }
+    .bd-long { display: none; } .bd-short { display: inline; }
+    .bd-calling { padding-left: 0; margin-left: 0; }
+  }
+  @media print {
+    .board { background: #fff !important; color: #111 !important; text-shadow: none !important; border-color: #ccc !important; }
+    .bd-late, .bd-bad { color: #111 !important; text-shadow: none !important; }
+    .bd-calling span, .bd-tick { animation: none !important; padding-left: 0 !important; white-space: normal; } .bd-msg { white-space: normal !important; }
+  }
+  .roads { grid-column: span 6; }
+  .rd-sum { display: inline-block; margin-top: 8px; font-size: 0.8rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+    background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .rd-sum.warn { background: color-mix(in srgb, var(--tomato) 22%, transparent); color: var(--tomato); }
+  .rd-group { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 2px; }
+  .rd-group:first-child { margin-top: 0; }
+  .rd-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--edge); }
+  .rd-road { justify-self: start; font-size: 0.78rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #1f3f8f; color: #fff; letter-spacing: 0.02em; }
+  .rd-txt { min-width: 0; }
+  .rd-txt b { display: block; font-weight: 600; font-size: 0.92rem; line-height: 1.35; }
+  .rd-txt span { font-size: 0.8rem; color: var(--muted); }
+  .rd-where { display: block; font-style: normal; font-size: 0.82rem; color: var(--ink); opacity: 0.8; margin: 1px 0 2px; }
+  .rd-row.live .rd-txt span { color: var(--tomato); font-weight: 600; }
+  .rd-mi { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rd-more { font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 8px 0 0; cursor: pointer; }
+
+  .house { margin-top: 48px; }
+  .house-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .house-head h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6rem; margin: 0; }
+  .legend { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+  .legend .dot.down { margin-left: 8px; }
+  .apps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .app { display: flex; gap: 12px; align-items: flex-start; padding: 18px; border-radius: 18px; }
+  .app-txt { flex: 1; min-width: 0; }
+  .app h3 { margin: 0 0 2px; font-size: 0.98rem; font-weight: 600; }
+  .app p { margin: 0; color: var(--muted); font-size: 0.82rem; }
+  .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); opacity: 0.5; margin-top: 4px; }
+  .dot.up { background: var(--accent); opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .dot.down { background: var(--tomato); opacity: 1; }
+  @media (max-width: 820px) { .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 420px) { .apps { grid-template-columns: minmax(0, 1fr); } }
+
+  footer { margin-top: 44px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 0.82rem; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 820px) {
+    .tonight, .dinner { grid-column: span 6; }
+    .small { grid-column: span 3; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding-top: 32px; }
+    .top { margin-bottom: 36px; }
+    .small { grid-column: span 6; }
+    .split { grid-template-columns: 1fr; }
+    .orb { filter: blur(70px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .orb { animation: none; }
+    .card, .arrow { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="top">
+    <div class="mark">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15 16 5l12 10v12a1 1 0 0 1-1 1h-7v-8h-8v8H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      Jacksons' trains
+    </div>
+    <div style="display:flex;align-items:center;gap:14px"><a href="#" onclick="window.print();return false" class="top-print">⎙ Print</a><div class="clock" id="clock">--:--</div></div>
+  </div>
+
+  <section class="hero">
+    <p class="hello">Kelvedon ⇄ Liverpool Street</p>
+    <h1>The <em>trains</em></h1>
+    <p class="date" id="date"></p>
+  </section>
+
+  <main class="grid">
+    <section class="card trains" aria-labelledby="tr-h">
+      <div class="tr-head">
+        <div>
+          <p class="label">Trains · Greater Anglia</p>
+          <h2 id="tr-h">Kelvedon → Liverpool Street</h2>
+        </div>
+        <div class="tr-switch" role="tablist" aria-label="Direction">
+          <button type="button" role="tab" data-dir="out" aria-selected="true">To London</button>
+          <button type="button" role="tab" data-dir="home" aria-selected="false">Home</button>
+        </div>
+      </div>
+      <div id="tr-msg"></div>
+      <div class="trk" id="trk" hidden aria-live="polite"></div>
+      <div class="tr-list" id="tr-list" aria-live="polite"><p class="tr-empty">Loading departures…</p></div>
+      <p class="tr-foot" id="tr-foot"></p>
+    </section>
+
+    <section class="card board-card" aria-labelledby="bd-h">
+      <div class="tr-head">
+        <div>
+          <p class="label">Station board</p>
+          <h2 id="bd-h">Kelvedon arrivals</h2>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="tr-switch bd-station" role="tablist" aria-label="Station">
+            <button type="button" role="tab" data-crs="KEL" aria-selected="true">Kelvedon</button>
+            <button type="button" role="tab" data-crs="LST" aria-selected="false">Liverpool St</button>
+          </div>
+          <div class="tr-switch bd-mode" role="tablist" aria-label="Board">
+            <button type="button" role="tab" data-mode="arrivals" aria-selected="true">Arrivals</button>
+            <button type="button" role="tab" data-mode="departures" aria-selected="false">Departures</button>
+          </div>
+        </div>
+      </div>
+      <div class="board" id="board" aria-live="polite"><div class="bd-row">Loading…</div></div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Live train times from National Rail</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function tick() {
+    var now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('date').textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  tick(); setInterval(tick, 15000);
+
+  // Make any cell whose text doesn't fit slide across to show the rest (like a station board)
+  function panLong(root) {
+    (root || document).querySelectorAll('.bd-where, .tr-to').forEach(function (el) {
+      if (el.classList.contains('pan')) { el.innerHTML = el.firstElementChild.innerHTML; el.classList.remove('pan'); }
+      var over = el.scrollWidth - el.clientWidth;
+      if (over > 2) {
+        el.innerHTML = '<span class="pan-in">' + el.innerHTML + '</span>';
+        el.classList.add('pan');
+        el.style.setProperty('--pan-by', -(over + 6) + 'px');
+        el.style.setProperty('--pan-dur', Math.max(3, over / 25).toFixed(1) + 's');
+      }
+    });
+  }
+  var panTimer = null;
+  window.addEventListener('resize', function () { clearTimeout(panTimer); panTimer = setTimeout(function () { panLong(); }, 250); });
+  // Measure again once the dot-matrix font has loaded, since it changes how wide names are
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { panLong(); });
+
+  // Commute trains: Kelvedon <-> Liverpool Street, live from National Rail via the Huxley2 proxy (no key).
+  // Mornings default to the London direction, from midday to the trip home.
+  var ROUTES = {
+    out:  { from: 'KEL', to: 'LST', title: 'Kelvedon → Liverpool Street' },
+    home: { from: 'LST', to: 'KEL', title: 'Liverpool Street → Kelvedon' }
+  };
+  var trDir = new Date().getHours() < 12 ? 'out' : 'home';
+  var trButtons = document.querySelectorAll('.trains .tr-switch button');
+  function trArrival(s, crs) {
+    var pts = (s.subsequentCallingPoints || [])[0];
+    var cp = pts && pts.callingPoint.filter(function (c) { return c.crs === crs; })[0];
+    if (!cp) return '';
+    return /^\d\d:\d\d$/.test(cp.et) ? cp.et : cp.st;
+  }
+  function trStatus(s) {
+    if (s.isCancelled || s.etd === 'Cancelled') return { cls: 'bad', text: 'Cancelled' };
+    if (s.etd === 'On time') return { cls: '', text: 'On time' };
+    if (s.etd === 'Delayed') return { cls: 'bad', text: 'Delayed' };
+    if (/^\d\d:\d\d$/.test(s.etd)) return { cls: 'late', text: 'Exp ' + s.etd };
+    return { cls: '', text: s.etd };
+  }
+  function trTrackBtn(r, std) {
+    return '<button type="button" class="tr-trk" data-std="' + std + '" aria-pressed="' + (trkIs(r.from, r.to, std) ? 'true' : 'false') +
+      '" aria-label="Track the ' + std + '">Track</button>';
+  }
+  // Trains that have already left but not yet arrived, from the destination's arrivals board,
+  // so they can still be tracked after they drop off the departures board.
+  function trOnTheWay(a, r) {
+    return (a && a.trainServices || []).map(function (s) {
+      var pts = ((s.previousCallingPoints || [])[0] || {}).callingPoint || [];
+      var o = pts.filter(function (c) { return c.crs === r.from; })[0];
+      if (!o || !o.at || s.eta === 'Arrived' || s.ata || s.isCancelled) return null;
+      return { std: o.st, left: o.at === 'On time' ? o.st : o.at, sta: s.sta, eta: s.eta, platform: s.platform,
+               origin: ((s.origin || [])[0] || {}).locationName || '' };
+    }).filter(Boolean);
+  }
+  function loadTrains() {
+    var r = ROUTES[trDir];
+    document.getElementById('tr-h').textContent = r.title;
+    trButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.dir === trDir ? 'true' : 'false'); });
+    var get = function (u) { return fetch(u, { cache: 'no-store' }).then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); }); };
+    Promise.all([
+      get('https://huxley2.azurewebsites.net/departures/' + r.from + '/to/' + r.to + '/6?expand=true'),
+      get('https://huxley2.azurewebsites.net/arrivals/' + r.to + '/from/' + r.from + '/10?expand=true').catch(function () { return null; })
+    ])
+      .then(function (both) {
+        var d = both[0], a = both[1];
+        if (ROUTES[trDir] !== r) return; // switched direction while loading
+        var msgs = (d.nrccMessages || []).map(function (m) {
+          return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.trim();
+        }).filter(Boolean);
+        document.getElementById('tr-msg').innerHTML = msgs.map(function (m) { return '<p class="tr-msg">' + esc(m) + '</p>'; }).join('');
+        var list = d.trainServices || [], moving = trOnTheWay(a, r), html = '';
+        var hdr = function (first) { return '<div class="tr-row hdr"><span>' + first + '</span><span>Arrives</span><span class="tr-plat">Platform</span><span style="justify-self:end">Status</span><span></span></div>'; };
+        if (moving.length) {
+          html += '<p class="rd-group">On the way</p>' + hdr('Left');
+          moving.forEach(function (m) {
+            var exp = /^\d\d:\d\d$/.test(m.eta) ? m.eta : m.sta, late = lateBy(m.sta, exp) > 1;
+            html += '<div class="tr-row"><span class="tr-dep">' + esc(m.left) + '</span>' +
+              '<span class="tr-to"><b>' + esc(exp) + '</b>' + (m.origin ? ' · from ' + esc(m.origin.replace(/^London /, '')) : '') + '</span>' +
+              '<span class="tr-plat">' + (m.platform ? 'Plat ' + esc(m.platform) : '–') + '</span>' +
+              '<span class="tr-st ' + (late ? 'late' : '') + '">' + (late ? 'Exp ' + esc(exp) : m.eta === 'Delayed' ? 'Delayed' : 'On time') + '</span>' +
+              trTrackBtn(r, m.std) + '</div>';
+          });
+          if (list.length) html += '<p class="rd-group">Departing</p>';
+        }
+        if (list.length) html += hdr('Departs');
+        list.forEach(function (s) {
+          var st = trStatus(s), late = /^\d\d:\d\d$/.test(s.etd);
+          var arr = trArrival(s, r.to);
+          html += '<div class="tr-row' + (st.text === 'Cancelled' ? ' cancelled' : '') + '">' +
+            '<span class="tr-dep">' + (late ? '<s>' + s.std + '</s>' + s.etd : s.std) + '</span>' +
+            '<span class="tr-to">' + (arr ? '<b>' + arr + '</b> · ' : '') + esc(s.destination[0].locationName) + '</span>' +
+            '<span class="tr-plat">' + (s.platform ? 'Plat ' + esc(s.platform) : '–') + '</span>' +
+            '<span class="tr-st ' + st.cls + '"' + (s.cancelReason || s.delayReason ? ' title="' + esc(s.cancelReason || s.delayReason) + '"' : '') + '>' + st.text + '</span>' +
+            trTrackBtn(r, s.std) + '</div>';
+        });
+        document.getElementById('tr-list').innerHTML = html || '<p class="tr-empty">No direct trains in the next couple of hours.</p>';
+        panLong(document.getElementById('tr-list'));
+        document.querySelectorAll('#tr-list .tr-trk').forEach(function (b) {
+          b.addEventListener('click', function () { trkStart(r.from, r.to, b.dataset.std); });
+        });
+        document.getElementById('tr-foot').textContent = 'Live from National Rail · updated ' +
+          new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      })
+      .catch(function () {
+        if (ROUTES[trDir] !== r) return;
+        document.getElementById('tr-list').innerHTML = "<p class=\"tr-empty\">Couldn't reach the train times service.</p>";
+      });
+  }
+  trButtons.forEach(function (b) {
+    b.addEventListener('click', function () { trDir = b.dataset.dir; loadTrains(); });
+  });
+  // Tracking one train. A train is identified by route + scheduled departure (e.g. LST-KEL-1702),
+  // not by its National Rail ID, which can stop working once it has left. Each minute we look for
+  // it on the destination's arrivals board, which lists it (with the actual time it left each stop)
+  // until it arrives; before it's on that board we use the origin's departures board instead.
+  // Remembered on this device, and /#track=LST-KEL-1702 opens it on any device.
+  var HUX = 'https://huxley2.azurewebsites.net/';
+  var trk = null, trkLast = null, trkTimer = null, trkCfg = null;
+  // Phone alerts: the "trains" container on the NAS follows the train and sends ntfy alerts.
+  // The page tells it what to follow through the control topic in data/trains.json (NAS only).
+  // Public page: the family code (the ntfy control topic) is kept in this browser only.
+  // Set it once per phone by opening the private setup link .../#code=<topic>.
+  (function () {
+    var m = /^#code=([A-Za-z0-9_-]+)$/.exec(location.hash), code = null;
+    try {
+      if (m) { localStorage.setItem('trains-code', m[1]); history.replaceState(null, '', location.pathname); }
+      code = localStorage.getItem('trains-code');
+    } catch (e) {}
+    if (code) trkCfg = { control: code };
+    var foot = document.getElementById('tr-foot'), note = document.createElement('p');
+    note.className = 'tr-foot';
+    note.textContent = code ? 'Phone alerts are on for this phone.' : 'Tracking works on this page. Phone alerts need the family setup link.';
+    if (m) note.textContent = 'Phone alerts set up for this phone. Tap Track on a train to get alerts.';
+    foot.parentNode.insertBefore(note, foot.nextSibling);
+  })();
+  function trkSend(cmd) {
+    if (!trkCfg) return;
+    fetch((trkCfg.server || 'https://ntfy.sh') + '/' + encodeURIComponent(trkCfg.control), { method: 'POST', body: cmd }).catch(function () {});
+  }
+  function trkToday() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function trkIs(from, to, std) { return !!trk && trk.from === from && trk.to === to && trk.std === std; }
+  function mins(t) { var m = /^(\d\d):(\d\d)$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; }
+  function lateBy(st, t) { var a = mins(st), b = mins(t); if (a === null || b === null) return 0; var d = b - a; if (d < -720) d += 1440; return d; }
+  function trkSave() {
+    try { if (trk) localStorage.setItem('trk', JSON.stringify(trk)); else localStorage.removeItem('trk'); } catch (e) {}
+    var h = trk ? '#track=' + trk.from + '-' + trk.to + '-' + trk.std.replace(':', '') : '';
+    if (location.hash.indexOf('#track=') === 0 || h) history.replaceState(null, '', location.pathname + location.search + h);
+  }
+  function trkStart(from, to, std) {
+    if (trkIs(from, to, std)) { trkStop(); return; }
+    trk = { from: from, to: to, std: std, day: trkToday() }; trkLast = null; trkSid = null;
+    trkSend('track ' + from + ' ' + to + ' ' + std);
+    trkSave(); trkLoad(); loadTrains();
+    clearInterval(trkTimer); trkTimer = setInterval(trkLoad, 60 * 1000);
+  }
+  function trkStop() {
+    if (trk) trkSend('stop ' + trk.from + ' ' + trk.to + ' ' + trk.std);
+    trk = null; trkLast = null; trkSid = null; clearInterval(trkTimer);
+    document.getElementById('trk').hidden = true;
+    trkSave(); loadTrains();
+  }
+  function pts(group) { return ((group || [])[0] || {}).callingPoint || []; }
+  function getJson(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+  // Find the train's National Rail service ID: on the boarding station's departures board if it
+  // hasn't left yet, otherwise on the destination's arrivals board (which lists it until it arrives).
+  var trkSid = null;
+  function trkFindSid(want) {
+    return getJson(HUX + 'departures/' + want.from + '/to/' + want.to + '/15')
+      .then(function (d) {
+        var s = (d.trainServices || []).filter(function (x) { return x.std === want.std; })[0];
+        if (s) return s.serviceID;
+        return getJson(HUX + 'arrivals/' + want.to + '/from/' + want.from + '/15?expand=true').then(function (a) {
+          var t = (a.trainServices || []).filter(function (x) {
+            return pts(x.previousCallingPoints).some(function (c) { return c.crs === want.from && c.st === want.std; });
+          })[0];
+          return t ? t.serviceID : null;
+        });
+      });
+  }
+  // The whole journey from where the train starts (e.g. Clacton or Ipswich) to our destination.
+  // Stops before the boarding station are marked "before"; the boarding station "board".
+  function trkFromService(d) {
+    var cp = function (c) { return { name: c.locationName, crs: c.crs, st: c.st, at: c.at, et: c.et }; };
+    var here = d.crs === trk.to
+      ? { name: d.locationName, crs: d.crs, st: d.sta, at: d.ata || (d.eta === 'Arrived' ? 'On time' : null), et: d.eta }
+      : { name: d.locationName, crs: d.crs, st: d.std, at: d.atd, et: d.etd };
+    var all = pts(d.previousCallingPoints).map(cp).concat([here], pts(d.subsequentCallingPoints).map(cp));
+    var crs = all.map(function (c) { return c.crs; }), fi = crs.indexOf(trk.from), ti = crs.indexOf(trk.to);
+    if (fi < 0 || ti < 0 || ti < fi) return null;
+    var stops = all.slice(0, ti + 1);
+    stops.forEach(function (c, i) { c.before = i < fi; c.board = i === fi; c.dest = i === ti; });
+    return { stops: stops, cancelled: d.isCancelled || here.et === 'Cancelled', reason: d.cancelReason || d.delayReason,
+             platform: d.platform ? d.platform + ' at ' + bdShortName(d.locationName) : null };
+  }
+  function bdShortName(n) { return (n || '').replace(/^London /, ''); }
+  function trkLoad() {
+    if (!trk) return;
+    var want = trk;
+    (trkSid ? Promise.resolve(trkSid) : trkFindSid(want))
+      .then(function (sid) {
+        if (trk !== want) return null;
+        trkSid = sid;
+        if (!sid) return null;
+        return getJson(HUX + 'service/' + sid).then(trkFromService, function () { trkSid = null; return null; });
+      })
+      .then(function (j) { if (trk !== want) return; if (j) trkLast = j; trkRender(j ? 'live' : 'missing'); })
+      .catch(function () { if (trk === want) trkRender('error'); });
+  }
+  function tAct(c) { return c.at === 'On time' ? c.st : c.at; }
+  function tExp(c) { return c.at ? tAct(c) : /^\d\d:\d\d$/.test(c.et || '') ? c.et : c.st; }
+  function tTxt(c) {
+    var sched = c.st;
+    if (c.at) { var a = tAct(c); return (c.dest ? 'arr ' : 'left ') + '<b' + (lateBy(sched, a) > 1 ? ' class="late"' : '') + '>' + esc(a) + '</b>'; }
+    if (c.et === 'Cancelled') return '<b class="late">cancelled</b>';
+    if (/^\d\d:\d\d$/.test(c.et || '')) return '<s>' + esc(sched) + '</s> <b class="late">' + esc(c.et) + '</b>';
+    return esc(sched) + (c.et === 'Delayed' ? ' <b class="late">delayed</b>' : '');
+  }
+  function lateTag(sched, t) { var n = lateBy(sched, t); return n > 1 ? ' <span class="late">(' + n + ' min late)</span>' : ' (on time)'; }
+  function trkRender(state) {
+    var box = document.getElementById('trk'), j = trkLast;
+    box.hidden = false;
+    var head = '<div class="trk-top"><div><p class="label">Tracking' + (trkCfg ? ' · phone alerts on' : '') + '</p><p class="trk-now" id="trk-now"></p></div>' +
+      '<button type="button" class="trk-stop" id="trk-stop">Stop tracking</button></div><p class="trk-sub" id="trk-sub"></p>';
+    var now = '', sub = '', line = '';
+    var title = 'The ' + trk.std + ' ' + (ROUTES.out.from === trk.from ? ROUTES.out.title : ROUTES.home.title);
+    var hhmm = new Date().toTimeString().slice(0, 5);
+    if (!j) {
+      now = title;
+      var gone = lateBy(trk.std, hhmm) > 0;
+      sub = state === 'error' ? "Couldn't reach the train times service. Trying again every minute."
+        : gone ? "It's no longer on the live boards, so it has most likely arrived."
+        : "Can't find this train on the live boards yet. It shows up about two hours before it leaves.";
+    } else {
+      var st = j.stops, dest = st[st.length - 1], k = -1, oi = 0;
+      st.forEach(function (c, i) { if (c.at) k = i; if (c.board) oi = i; });
+      var board = st[oi], destT = tExp(dest), late = lateBy(dest.st, destT);
+      var lateTxt = late > 1 ? ' <span class="late">(' + late + ' min late)</span>' : !j.cancelled ? ' · on time' : '';
+      if (j.cancelled) {
+        now = title + ' is cancelled';
+        sub = j.reason ? esc(j.reason) : '';
+      } else if (dest.at || (state === 'missing' && k === st.length - 2 && mins(destT) !== null && lateBy(destT, hhmm) >= 0)) {
+        now = 'Arrived at ' + esc(dest.name) + ' ' + esc(destT);
+        sub = title + '.' + (late > 1 ? ' <span class="late">' + late + ' min late.</span>' : '');
+      } else if (k < oi) {
+        // Not at our station yet: say where it is on the way to us, so we know if it's running late
+        var bt = tExp(board);
+        if (k >= 0) {
+          now = 'On its way to ' + esc(board.name);
+          sub = 'Left ' + esc(st[k].name) + ' at ' + esc(tAct(st[k])) + lateTag(st[k].st, tAct(st[k])) +
+            ' · due at ' + esc(board.name) + ' <b>' + esc(bt) + '</b>' + lateTag(board.st, bt);
+        } else {
+          now = 'Not left ' + esc(st[0].name) + ' yet';
+          sub = (oi > 0 ? 'Starts at ' + esc(st[0].name) + ' ' + esc(tExp(st[0])) + ' · ' : '') +
+            'due to leave ' + esc(board.name) + ' <b>' + esc(bt) + '</b>' + lateTag(board.st, bt);
+        }
+        sub += ' · expected ' + esc(dest.name) + ' <b>' + esc(destT) + '</b>' + (j.platform ? ' · platform ' + esc(j.platform) : '');
+      } else {
+        var last = st[k], next = st[k + 1];
+        now = 'Left ' + esc(last.name) + ' at ' + esc(tAct(last)) + (next && !next.dest ? ' · next ' + esc(next.name) : '');
+        sub = 'Expected at ' + esc(dest.name) + ' <b>' + esc(destT) + '</b>' + lateTxt;
+      }
+      if (j.reason && !j.cancelled) sub += '<br>' + esc(j.reason);
+      line = '<ol class="trk-line">' + st.map(function (c, i) {
+        var cls = (c.at ? 'done' : i === k + 1 ? 'next' : '') + (c.dest ? ' dest' : '') + (c.before ? ' before' : '') + (c.board ? ' boarding' : '');
+        return '<li class="' + cls + '"><span class="trk-dot"></span><span class="trk-name">' + esc(c.name) +
+          (c.board && oi > 0 ? ' <em class="trk-you">get on here</em>' : '') + '</span><span class="trk-t">' + tTxt(c) + '</span></li>';
+      }).join('') + '</ol>';
+    }
+    box.innerHTML = head + line;
+    document.getElementById('trk-now').innerHTML = now;
+    document.getElementById('trk-sub').innerHTML = sub + (state === 'live' ? ' · updated ' + hhmm : '');
+    document.getElementById('trk-stop').addEventListener('click', trkStop);
+  }
+  // Resume: a #track= link wins, then whatever this device was tracking today
+  (function () {
+    var m = /^#track=([A-Z]{3})-([A-Z]{3})-(\d\d)(\d\d)$/.exec(location.hash), saved = null;
+    try { saved = JSON.parse(localStorage.getItem('trk') || 'null'); } catch (e) {}
+    if (m) trk = { from: m[1], to: m[2], std: m[3] + ':' + m[4], day: trkToday() };
+    else if (saved && saved.day === trkToday()) trk = saved;
+    if (!trk) return;
+    trkSave(); trkLoad(); trkTimer = setInterval(trkLoad, 60 * 1000);
+  })();
+
+  loadTrains(); setInterval(loadTrains, 2 * 60 * 1000);
+
+  // Station board: arrivals or departures at Kelvedon or Liverpool Street, styled like the
+  // dot-matrix displays on the platform. All trains, not just the direct Kelvedon <-> London ones.
+  var bdCrs = 'KEL', bdMode = 'arrivals', bdLoading = null;
+  var BD_NAMES = { KEL: 'Kelvedon', LST: 'Liverpool Street' };
+  var bdSt = document.querySelectorAll('.bd-station button'), bdMd = document.querySelectorAll('.bd-mode button');
+  function bdShort(n) { return (n || '').replace(/^London /, ''); }
+  function bdExp(sched, e, cancelled) {
+    if (cancelled || e === 'Cancelled') return '<span class="bd-exp bd-bad">Cancelled</span>';
+    if (e === 'On time') return '<span class="bd-exp">On time</span>';
+    if (e === 'Delayed') return '<span class="bd-exp bd-bad">Delayed</span>';
+    if (/^\d\d:\d\d$/.test(e || '')) return '<span class="bd-exp bd-late">Exp ' + e + '</span>';
+    return '<span class="bd-exp">' + esc(e || '') + '</span>';
+  }
+  function loadBoard() {
+    var crs = bdCrs, mode = bdMode, arr = mode === 'arrivals';
+    document.getElementById('bd-h').textContent = BD_NAMES[crs] + ' ' + mode;
+    bdSt.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.crs === crs ? 'true' : 'false'); });
+    bdMd.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false'); });
+    var key = crs + mode; bdLoading = key;
+    fetch(HUX + mode + '/' + crs + '/10' + (arr ? '' : '?expand=true'), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        if (bdLoading !== key) return;
+        var list = (d.trainServices || []).concat(d.busServices || []);
+        var html = '<div class="bd-row hd"><span>Time</span><span>' + (arr ? 'From' : 'Destination') + '</span><span class="bd-plat">Plat</span><span class="bd-exp"><span class="bd-long">Expected</span><span class="bd-short">Exp</span></span></div>';
+        list.forEach(function (s, i) {
+          var t = arr ? s.sta : s.std, e = arr ? s.eta : s.etd;
+          var where = arr ? ((s.origin || [])[0] || {}).locationName : ((s.destination || [])[0] || {}).locationName;
+          html += '<div class="bd-row"><span>' + esc(t || '') + '</span><span class="bd-where">' + esc(bdShort(where)) + '</span>' +
+            '<span class="bd-plat">' + esc(s.platform || (s.serviceType === 1 ? 'BUS' : '-')) + '</span>' + bdExp(t, e, s.isCancelled) + '</div>';
+          if (!arr && i === 0) {
+            var cps = (((s.subsequentCallingPoints || [])[0] || {}).callingPoint || []).map(function (c) { return bdShort(c.locationName); });
+            if (cps.length) {
+              var txt = 'Calling at: ' + (cps.length > 1 ? cps.slice(0, -1).join(', ') + ' and ' + cps[cps.length - 1] : cps[0] + ' only');
+              html += '<div class="bd-calling"><span style="--bd-dur:' + Math.max(12, txt.length * 0.28).toFixed(0) + 's">' + esc(txt) + '</span></div>';
+            }
+          }
+        });
+        if (!list.length) html += '<div class="bd-row"><span></span><span>No ' + mode + ' in the next two hours</span></div>';
+        // Disruption notices scroll along the bottom, like the real boards
+        var msg = (d.nrccMessages || []).map(function (m) { return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean).join('   ·   ');
+        html += '<div class="bd-foot"><span class="bd-msg">' + (msg
+          ? '<span class="bd-tick" style="--bd-dur:' + Math.max(14, msg.length * 0.22).toFixed(0) + 's">' + esc(msg) + '</span>'
+          : esc(BD_NAMES[crs])) + '</span><span class="bd-clock" id="bd-clock"></span></div>';
+        document.getElementById('board').innerHTML = html;
+        panLong(document.getElementById('board'));
+        bdTick();
+      })
+      .catch(function () {
+        if (bdLoading === key) document.getElementById('board').innerHTML = '<div class="bd-row"><span></span><span>Board unavailable</span></div>';
+      });
+  }
+  function bdTick() { var c = document.getElementById('bd-clock'); if (c) c.textContent = new Date().toTimeString().slice(0, 8); }
+  bdSt.forEach(function (b) { b.addEventListener('click', function () { bdCrs = b.dataset.crs; loadBoard(); }); });
+  bdMd.forEach(function (b) { b.addEventListener('click', function () { bdMode = b.dataset.mode; loadBoard(); }); });
+  loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000);
+
+})();
+</script>
+</body>
+</html>
