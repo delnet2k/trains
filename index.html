@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Trains</title>
+<title>Jackson&#39;s Commute</title>
 <meta name="theme-color" content="#0c1020">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -300,35 +300,18 @@
   <div class="top">
     <div class="mark">
       <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15 16 5l12 10v12a1 1 0 0 1-1 1h-7v-8h-8v8H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      Jacksons' trains
+      Jackson&#39;s Commute
     </div>
     <div style="display:flex;align-items:center;gap:14px"><div class="clock" id="clock">--:--</div></div>
   </div>
 
   <section class="hero">
-    <p class="hello">Kelvedon ⇄ Liverpool Street</p>
-    <h1>The <em>trains</em></h1>
+    <p class="hello">Kelvedon ⇄ Liverpool Street · A12 &amp; A120</p>
+    <h1>Jackson&#39;s <em>Commute</em></h1>
     <p class="date" id="date"></p>
   </section>
 
   <main class="grid">
-    <section class="card trains" aria-labelledby="tr-h">
-      <div class="tr-head">
-        <div>
-          <p class="label">Trains · Greater Anglia</p>
-          <h2 id="tr-h">Kelvedon → Liverpool Street</h2>
-        </div>
-        <div class="tr-switch" role="tablist" aria-label="Direction">
-          <button type="button" role="tab" data-dir="out" aria-selected="true">To London</button>
-          <button type="button" role="tab" data-dir="home" aria-selected="false">Home</button>
-        </div>
-      </div>
-      <div id="tr-msg"></div>
-      <div class="trk" id="trk" hidden aria-live="polite"></div>
-      <div class="tr-list" id="tr-list" aria-live="polite"><p class="tr-empty">Loading departures…</p></div>
-      <p class="tr-foot" id="tr-foot"></p>
-    </section>
-
     <section class="card board-card" aria-labelledby="bd-h">
       <div class="tr-head">
         <div>
@@ -347,6 +330,23 @@
         </div>
       </div>
       <div class="board" id="board" aria-live="polite"><div class="bd-row">Loading…</div></div>
+    </section>
+
+    <section class="card trains" aria-labelledby="tr-h">
+      <div class="tr-head">
+        <div>
+          <p class="label">Trains · Greater Anglia</p>
+          <h2 id="tr-h">Kelvedon → Liverpool Street</h2>
+        </div>
+        <div class="tr-switch" role="tablist" aria-label="Direction">
+          <button type="button" role="tab" data-dir="out" aria-selected="true">To London</button>
+          <button type="button" role="tab" data-dir="home" aria-selected="false">Home</button>
+        </div>
+      </div>
+      <div id="tr-msg"></div>
+      <div class="trk" id="trk" hidden aria-live="polite"></div>
+      <div class="tr-list" id="tr-list" aria-live="polite"><p class="tr-empty">Loading departures…</p></div>
+      <p class="tr-foot" id="tr-foot"></p>
     </section>
 
   </main>
@@ -484,8 +484,6 @@
   // Remembered on this device, and /#track=LST-KEL-1702 opens it on any device.
   var HUX = 'https://huxley2.azurewebsites.net/';
   var trk = null, trkLast = null, trkTimer = null, trkCfg = null;
-  // Phone alerts: the "trains" container on the NAS follows the train and sends ntfy alerts.
-  // The page tells it what to follow through the control topic in data/trains.json (NAS only).
   // Public page: the family code (the ntfy control topic) is kept in this browser only.
   // Set it once per phone by opening the private setup link .../#code=<topic>.
   (function () {
