@@ -213,6 +213,10 @@
   .bd-where { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .bd-plat { text-align: center; }
   .bd-exp { text-align: right; white-space: nowrap; }
+  .bd-filter { font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid var(--edge); background: var(--glass-2); color: var(--muted); }
+  .bd-filter[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .bd-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .bd-short { display: none; }
   /* Names too long for their column slide across to show the rest, then back */
   .pan { text-overflow: clip !important; }
@@ -327,6 +331,7 @@
             <button type="button" role="tab" data-mode="arrivals" aria-selected="true">Arrivals</button>
             <button type="button" role="tab" data-mode="departures" aria-selected="false">Departures</button>
           </div>
+          <button type="button" class="bd-filter" id="bd-filter" aria-pressed="false">Kelvedon trains only</button>
         </div>
       </div>
       <div class="board" id="board" aria-live="polite"><div class="bd-row">Loading…</div></div>
@@ -663,7 +668,10 @@
 
   // Station board: arrivals or departures at Kelvedon or Liverpool Street, styled like the
   // dot-matrix displays on the platform. All trains, not just the direct Kelvedon <-> London ones.
-  var bdCrs = 'KEL', bdMode = 'arrivals', bdLoading = null;
+  var bdCrs = 'KEL', bdMode = 'arrivals', bdLoading = null, bdOnly = false;
+  try { bdOnly = localStorage.getItem('bd-only') === '1'; } catch (e) {}
+  // "Only our trains": at Liverpool Street, just trains that call at Kelvedon; at Kelvedon, just London trains
+  var BD_OTHER = { KEL: 'LST', LST: 'KEL' }, BD_ONLY_LABEL = { KEL: 'London trains only', LST: 'Kelvedon trains only' };
   var BD_NAMES = { KEL: 'Kelvedon', LST: 'Liverpool Street' };
   var bdSt = document.querySelectorAll('.bd-station button'), bdMd = document.querySelectorAll('.bd-mode button');
   function bdShort(n) { return (n || '').replace(/^London /, ''); }
@@ -676,11 +684,13 @@
   }
   function loadBoard() {
     var crs = bdCrs, mode = bdMode, arr = mode === 'arrivals';
-    document.getElementById('bd-h').textContent = BD_NAMES[crs] + ' ' + mode;
+    document.getElementById('bd-h').textContent = BD_NAMES[crs] + ' ' + mode + (bdOnly ? (crs === 'LST' ? ' · Kelvedon trains' : ' · London trains') : '');
+    var fb = document.getElementById('bd-filter');
+    fb.textContent = BD_ONLY_LABEL[crs]; fb.setAttribute('aria-pressed', bdOnly ? 'true' : 'false');
     bdSt.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.crs === crs ? 'true' : 'false'); });
     bdMd.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false'); });
-    var key = crs + mode; bdLoading = key;
-    fetch(HUX + mode + '/' + crs + '/10' + (arr ? '' : '?expand=true'), { cache: 'no-store' })
+    var key = crs + mode + bdOnly; bdLoading = key;
+    fetch(HUX + mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/10' + (arr ? '' : '?expand=true'), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (d) {
         if (bdLoading !== key) return;
@@ -715,6 +725,11 @@
   }
   function bdTick() { var c = document.getElementById('bd-clock'); if (c) c.textContent = new Date().toTimeString().slice(0, 8); }
   bdSt.forEach(function (b) { b.addEventListener('click', function () { bdCrs = b.dataset.crs; loadBoard(); }); });
+  document.getElementById('bd-filter').addEventListener('click', function () {
+    bdOnly = !bdOnly;
+    try { localStorage.setItem('bd-only', bdOnly ? '1' : '0'); } catch (e) {}
+    loadBoard();
+  });
   bdMd.forEach(function (b) { b.addEventListener('click', function () { bdMode = b.dataset.mode; loadBoard(); }); });
   loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000);
 
