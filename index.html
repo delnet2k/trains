@@ -349,10 +349,22 @@
       <p class="tr-foot" id="tr-foot"></p>
     </section>
 
+    <section class="card roads" aria-labelledby="rd-h">
+      <div class="tr-head">
+        <div>
+          <p class="label" id="rd-label">Roads · within 15 miles</p>
+          <h2 id="rd-h">A12 &amp; A120</h2>
+          <span class="rd-sum" id="rd-sum">Checking…</span>
+        </div>
+      </div>
+      <div id="rd-list" aria-live="polite"></div>
+      <p class="tr-foot" id="rd-foot"></p>
+    </section>
+
   </main>
 
   <footer>
-    <span>Live train times from National Rail</span>
+    <span>Live train times from National Rail · road closures from National Highways</span>
   </footer>
 </div>
 
@@ -705,6 +717,101 @@
   bdSt.forEach(function (b) { b.addEventListener('click', function () { bdCrs = b.dataset.crs; loadBoard(); }); });
   bdMd.forEach(function (b) { b.addEventListener('click', function () { bdMode = b.dataset.mode; loadBoard(); }); });
   loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000);
+
+  // Road closures near home, published by the family's roads monitor.
+  var RD_SHOW = 5, rdView = 'home', rdData = null;
+  var RD_VIEWS = {
+    home: { label: 'Roads · within 15 miles', title: 'A12 & A120' }
+  };
+  var rdButtons = document.querySelectorAll('.rd-switch button');
+  function rdTime(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function rdDay(d) { return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function rdIsNow(c, now) { return c.live || (c.start && new Date(c.start) <= now); }
+  function rdWhen(c, now) {
+    var s = c.start && new Date(c.start), e = c.end && new Date(c.end);
+    var long = s && e && (e - s) > 36 * 3600 * 1000;
+    if (rdIsNow(c, now)) {
+      if (!e) return 'Now';
+      return 'Now · until ' + (e.toDateString() === now.toDateString() ? rdTime(e) : (long ? rdDay(e) : rdDay(e) + ' ' + rdTime(e)));
+    }
+    if (!s) return '';
+    if (long) return rdDay(s) + ' – ' + rdDay(e);
+    var tmr = new Date(now); tmr.setDate(now.getDate() + 1);
+    var label = s.toDateString() === now.toDateString() ? (s.getHours() >= 17 ? 'Tonight' : 'Today')
+      : s.toDateString() === tmr.toDateString() ? (s.getHours() >= 17 ? 'Tomorrow night' : 'Tomorrow') : rdDay(s);
+    return label + ' ' + rdTime(s) + (e ? '–' + rdTime(e) : '');
+  }
+  // Junction numbers to places (from the Wikipedia A12 / A14 junction lists)
+  var JCT_NAMES = {
+    A12: { '15': 'Chelmsford (Widford)', '16': 'Galleywood', '17': 'Howe Green', '18': 'Sandon', '19': 'Boreham (Chelmsford North)',
+      '20A': 'Hatfield Peverel', '20B': 'Hatfield Peverel', '21': 'Witham South', '22': 'Witham', '23': 'Kelvedon',
+      '24': 'Feering', '25': 'Marks Tey', '26': 'Stanway', '27': 'Colchester (Lexden)', '28': 'Colchester North',
+      '29': 'Crown Interchange', '30': 'Dedham', '31': 'East Bergholt', '32B': 'Washbrook', '33': 'Copdock' }
+  };
+  function rdPlaces(c) {
+    var names = JCT_NAMES[c.road];
+    if (!names) return '';
+    var m = /\b(?:jct|junction|j)s?\s*(\d+[ab]?)(?:\s*(?:to|-|and)\s*(?:jct|junction|j)?\s*(\d+[ab]?))?/i.exec(c.summary);
+    if (!m) return '';
+    var name = function (j) { j = j.toUpperCase(); return names[j] ? 'J' + j + ' ' + names[j] : ''; };
+    var a = name(m[1]), b = m[2] ? name(m[2]) : '';
+    return a && b ? a + ' → ' + b : a || b;
+  }
+  function rdRow(c, now) {
+    var text = c.summary.replace(/\s*\(MP[^)]*\)?/g, '').replace(/\s+/g, ' ').trim();
+    var places = rdPlaces(c);
+    return '<div class="rd-row' + (rdIsNow(c, now) ? ' live' : '') + '"><span class="rd-road">' + esc(c.road) + '</span>' +
+      '<span class="rd-txt"><b>' + esc(text) + '</b>' + (places ? '<em class="rd-where">' + esc(places) + '</em>' : '') +
+      '<span>' + esc(rdWhen(c, now)) + '</span></span>' +
+      '<span class="rd-mi">' + (rdView === 'home' ? c.miles + ' mi' : '') + '</span></div>';
+  }
+  function rdGroup(title, items, now, id) {
+    if (!items.length) return '';
+    var html = '<p class="rd-group">' + title + '</p>' + items.slice(0, RD_SHOW).map(function (c) { return rdRow(c, now); }).join('');
+    if (items.length > RD_SHOW) {
+      html += '<div id="' + id + '" hidden>' + items.slice(RD_SHOW).map(function (c) { return rdRow(c, now); }).join('') + '</div>' +
+        '<button type="button" class="rd-more" data-for="' + id + '">Show ' + (items.length - RD_SHOW) + ' more</button>';
+    }
+    return html;
+  }
+  function renderRoads() {
+    if (!rdData) return;
+    var now = new Date(), v = RD_VIEWS[rdView], html = '', sum = document.getElementById('rd-sum'), bad;
+    document.getElementById('rd-label').textContent = v.label;
+    document.getElementById('rd-h').textContent = v.title;
+    rdButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.view === rdView ? 'true' : 'false'); });
+    var mine = (rdData.closures || []).filter(function (c) { return (c.areas || ['home']).indexOf(rdView) >= 0; });
+    if (rdView === 'home') {
+      var live = mine.filter(function (c) { return rdIsNow(c, now); });
+      var soon = mine.filter(function (c) { return !rdIsNow(c, now); });
+      bad = live.length;
+      sum.textContent = bad ? bad + (bad === 1 ? ' closure now' : ' closures now') : 'All clear now';
+      html = rdGroup('Now', live, now, 'rd-x1') + rdGroup('Coming up', soon, now, 'rd-x2');
+      if (!html) html = '<p class="tr-empty">No closures on the A12 or A120 near us this week.</p>';
+    }
+    sum.className = 'rd-sum' + (bad ? ' warn' : '');
+    var list = document.getElementById('rd-list');
+    list.innerHTML = html;
+    list.querySelectorAll('.rd-more').forEach(function (btn) {
+      btn.addEventListener('click', function () { document.getElementById(btn.dataset.for).hidden = false; btn.remove(); });
+    });
+    var upd = new Date(rdData.updated), stale = (now - upd) > 90 * 60 * 1000;
+    document.getElementById('rd-foot').textContent = 'National Highways · updated ' + rdTime(upd) +
+      (stale ? ' · may be out of date' : '');
+  }
+  function loadRoads() {
+    fetch("https://gist.githubusercontent.com/delnet2k/ef8612eed8bf0311728cbe854c15fa5a/raw/commute-roads.json" + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { rdData = d; renderRoads(); })
+      .catch(function () {
+        document.getElementById('rd-sum').textContent = 'Unavailable';
+        document.getElementById('rd-list').innerHTML = "<p class=\"tr-empty\">Couldn't load road closures.</p>";
+      });
+  }
+  rdButtons.forEach(function (b) {
+    b.addEventListener('click', function () { rdView = b.dataset.view; renderRoads(); });
+  });
+  loadRoads(); setInterval(loadRoads, 5 * 60 * 1000);
 
 })();
 </script>
