@@ -401,7 +401,36 @@
   // Measure again once the dot-matrix font has loaded, since it changes how wide names are
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { panLong(); });
 
-  // Commute trains: Kelvedon <-> Liverpool Street, live from National Rail via the Huxley2 proxy (no key).
+  // Live train times: National Rail's Live Departure Boards on the Rail Data Marketplace (raildata.org.uk).
+  // Departures, arrivals and service details are separate products there, each with its own endpoint
+  // and Consumer Key: copy both from the product's Specification and Subscriptions pages. The keys
+  // are visible to anyone who views this page's source.
+  var LDB = {
+    dep: { url: 'https://api1.raildata.org.uk/1010-live-departure-board-dep1_2/LDBWS/api/20220120', key: '' },
+    arr: { url: 'https://api1.raildata.org.uk/1010-live-arrival-board-arr/LDBWS/api/20220120', key: '' },
+    svc: { url: 'https://api1.raildata.org.uk/1010-service-details/LDBWS/api/20220120', key: '' }
+  };
+  function ldbGet(product, path) {
+    var p = LDB[product];
+    return fetch(p.url + '/' + path, { cache: 'no-store', headers: { 'x-apikey': p.key } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  // A station board. With details (calling points) it's at most 9 trains; without, up to 150.
+  function ldbBoard(mode, crs, other, rows, details) {
+    var dep = mode === 'departures';
+    var op = details ? (dep ? 'GetDepBoardWithDetails' : 'GetArrBoardWithDetails') : (dep ? 'GetDepartureBoard' : 'GetArrivalBoard');
+    var q = '?numRows=' + (details ? Math.min(rows, 9) : rows) +
+      (other ? '&filterCrs=' + other + '&filterType=' + (dep ? 'to' : 'from') : '');
+    return ldbGet(dep ? 'dep' : 'arr', op + '/' + crs + q);
+  }
+  function ldbService(sid) { return ldbGet('svc', 'GetServiceDetails/' + encodeURIComponent(sid)); }
+  function ldbMsgs(d) {
+    return (d.nrccMessages || []).map(function (m) {
+      return new DOMParser().parseFromString(m.value || m.Value || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim();
+    }).filter(Boolean);
+  }
+
+  // Commute trains: Kelvedon <-> Liverpool Street.
   // Mornings default to the London direction, from midday to the trip home.
   var ROUTES = {
     out:  { from: 'KEL', to: 'LST', title: 'Kelvedon → Liverpool Street' },
@@ -441,17 +470,14 @@
     var r = ROUTES[trDir];
     document.getElementById('tr-h').textContent = r.title;
     trButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.dir === trDir ? 'true' : 'false'); });
-    var get = function (u) { return fetch(u, { cache: 'no-store' }).then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); }); };
     Promise.all([
-      get('https://huxley2.azurewebsites.net/departures/' + r.from + '/to/' + r.to + '/6?expand=true'),
-      get('https://huxley2.azurewebsites.net/arrivals/' + r.to + '/from/' + r.from + '/10?expand=true').catch(function () { return null; })
+      ldbBoard('departures', r.from, r.to, 6, true),
+      ldbBoard('arrivals', r.to, r.from, 9, true).catch(function () { return null; })
     ])
       .then(function (both) {
         var d = both[0], a = both[1];
         if (ROUTES[trDir] !== r) return; // switched direction while loading
-        var msgs = (d.nrccMessages || []).map(function (m) {
-          return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.trim();
-        }).filter(Boolean);
+        var msgs = ldbMsgs(d);
         document.getElementById('tr-msg').innerHTML = msgs.map(function (m) { return '<p class="tr-msg">' + esc(m) + '</p>'; }).join('');
         var list = d.trainServices || [], moving = trOnTheWay(a, r), html = '';
         var hdr = function (first) { return '<div class="tr-row hdr"><span>' + first + '</span><span>Arrives</span><span class="tr-plat">Platform</span><span style="justify-self:end">Status</span><span></span></div>'; };
@@ -499,7 +525,6 @@
   // it on the destination's arrivals board, which lists it (with the actual time it left each stop)
   // until it arrives; before it's on that board we use the origin's departures board instead.
   // Remembered on this device, and /#track=LST-KEL-1702 opens it on any device.
-  var HUX = 'https://huxley2.azurewebsites.net/';
   var trk = null, trkLast = null, trkTimer = null, trkCfg = null;
   // Public page: the family code (the ntfy control topic) is kept in this browser only.
   // Set it once per phone by opening the private setup link .../#code=<topic>.
@@ -543,16 +568,15 @@
     trkSave(); loadTrains();
   }
   function pts(group) { return ((group || [])[0] || {}).callingPoint || []; }
-  function getJson(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   // Find the train's National Rail service ID: on the boarding station's departures board if it
   // hasn't left yet, otherwise on the destination's arrivals board (which lists it until it arrives).
   var trkSid = null;
   function trkFindSid(want) {
-    return getJson(HUX + 'departures/' + want.from + '/to/' + want.to + '/15')
+    return ldbBoard('departures', want.from, want.to, 15)
       .then(function (d) {
         var s = (d.trainServices || []).filter(function (x) { return x.std === want.std; })[0];
         if (s) return s.serviceID;
-        return getJson(HUX + 'arrivals/' + want.to + '/from/' + want.from + '/15?expand=true').then(function (a) {
+        return ldbBoard('arrivals', want.to, want.from, 9, true).then(function (a) {
           var t = (a.trainServices || []).filter(function (x) {
             return pts(x.previousCallingPoints).some(function (c) { return c.crs === want.from && c.st === want.std; });
           })[0];
@@ -584,7 +608,7 @@
         if (trk !== want) return null;
         trkSid = sid;
         if (!sid) return null;
-        return getJson(HUX + 'service/' + sid).then(trkFromService, function () { trkSid = null; return null; });
+        return ldbService(sid).then(trkFromService, function () { trkSid = null; return null; });
       })
       .then(function (j) { if (trk !== want) return; if (j) trkLast = j; trkRender(j ? 'live' : 'missing'); })
       .catch(function () { if (trk === want) trkRender('error'); });
@@ -690,8 +714,7 @@
     bdSt.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.crs === crs ? 'true' : 'false'); });
     bdMd.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false'); });
     var key = crs + mode + bdOnly; bdLoading = key;
-    fetch(HUX + mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/10' + (arr ? '' : '?expand=true'), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    ldbBoard(mode, crs, bdOnly ? BD_OTHER[crs] : null, 10, !arr)
       .then(function (d) {
         if (bdLoading !== key) return;
         var list = (d.trainServices || []).concat(d.busServices || []);
@@ -711,7 +734,7 @@
         });
         if (!list.length) html += '<div class="bd-row"><span></span><span>No ' + mode + ' in the next two hours</span></div>';
         // Disruption notices scroll along the bottom, like the real boards
-        var msg = (d.nrccMessages || []).map(function (m) { return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean).join('   ·   ');
+        var msg = ldbMsgs(d).join('   ·   ');
         html += '<div class="bd-foot"><span class="bd-msg">' + (msg
           ? '<span class="bd-tick" style="--bd-dur:' + Math.max(14, msg.length * 0.22).toFixed(0) + 's">' + esc(msg) + '</span>'
           : esc(BD_NAMES[crs])) + '</span><span class="bd-clock" id="bd-clock"></span></div>';
