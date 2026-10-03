@@ -376,6 +376,36 @@
 <script>
 (function () {
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  // Train times come from National Rail's own feed (Rail Data Marketplace) using the family's
+  // keys, or from the free Huxley service when there are no keys or the feed fails. Both answer
+  // with the same JSON, so callers ask for Huxley-style paths: departures/KEL/to/LST/10,
+  var HUX = 'https://huxley2.azurewebsites.net/', RDM = 'https://api1.raildata.org.uk/', LDB = '/LDBWS/api/20220120/';
+  var railKeys = Promise.resolve().then(function () {
+    try { var k = (localStorage.getItem('trains-rail') || '').split('.'); return k.length === 3 ? { dep: k[0], arr: k[1], svc: k[2] } : null; }
+    catch (e) { return null; }
+  });
+  function getJson(u, headers) {
+    return fetch(u, { cache: 'no-store', headers: headers || {} })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function railUrl(path, k) {
+    var b = /^(departures|arrivals)\/([A-Z]{3})(?:\/(?:to|from)\/([A-Z]{3}))?\/(\d+)/.exec(path), s = /^service\/([^?]+)/.exec(path);
+    if (!k) return null;
+    if (b && b[1] === 'departures' && k.dep) return [RDM + '1010-live-departure-board-dep1_2' + LDB + 'GetDepBoardWithDetails/' + b[2] +
+      '?numRows=' + b[4] + (b[3] ? '&filterCrs=' + b[3] + '&filterType=to' : ''), k.dep];
+    if (b && b[1] === 'arrivals' && k.arr) return [RDM + '1010-live-arrival-board-arr' + LDB + 'GetArrBoardWithDetails/' + b[2] +
+      '?numRows=' + b[4] + (b[3] ? '&filterCrs=' + b[3] + '&filterType=from' : ''), k.arr];
+    if (s && k.svc) return [RDM + '1010-service-details1_2' + LDB + 'GetServiceDetails/' + s[1], k.svc];
+    return null;
+  }
+  function railGet(path) {
+    var hux = function () { return getJson(HUX + path); };
+    return railKeys.then(function (k) {
+      var u = railUrl(path, k);
+      return u ? getJson(u[0], { 'x-apikey': u[1] }).catch(hux) : hux();
+    });
+  }
+  function nrcc(m) { return new DOMParser().parseFromString(m.value || m.Value || '', 'text/html').body.textContent; }
   function tick() {
     var now = new Date();
     document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -441,16 +471,15 @@
     var r = ROUTES[trDir];
     document.getElementById('tr-h').textContent = r.title;
     trButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.dir === trDir ? 'true' : 'false'); });
-    var get = function (u) { return fetch(u, { cache: 'no-store' }).then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); }); };
     Promise.all([
-      get('https://huxley2.azurewebsites.net/departures/' + r.from + '/to/' + r.to + '/6?expand=true'),
-      get('https://huxley2.azurewebsites.net/arrivals/' + r.to + '/from/' + r.from + '/10?expand=true').catch(function () { return null; })
+      railGet('departures/' + r.from + '/to/' + r.to + '/6?expand=true'),
+      railGet('arrivals/' + r.to + '/from/' + r.from + '/10?expand=true').catch(function () { return null; })
     ])
       .then(function (both) {
         var d = both[0], a = both[1];
         if (ROUTES[trDir] !== r) return; // switched direction while loading
         var msgs = (d.nrccMessages || []).map(function (m) {
-          return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.trim();
+          return nrcc(m).trim();
         }).filter(Boolean);
         document.getElementById('tr-msg').innerHTML = msgs.map(function (m) { return '<p class="tr-msg">' + esc(m) + '</p>'; }).join('');
         var list = d.trainServices || [], moving = trOnTheWay(a, r), html = '';
@@ -499,14 +528,17 @@
   // it on the destination's arrivals board, which lists it (with the actual time it left each stop)
   // until it arrives; before it's on that board we use the origin's departures board instead.
   // Remembered on this device, and /#track=LST-KEL-1702 opens it on any device.
-  var HUX = 'https://huxley2.azurewebsites.net/';
   var trk = null, trkLast = null, trkTimer = null, trkCfg = null;
-  // Public page: the family code (the ntfy control topic) is kept in this browser only.
-  // Set it once per phone by opening the private setup link .../#code=<topic>.
+  // Public page: the family code (the ntfy control topic) and National Rail keys are kept in this
+  // browser only. Set them once per phone by opening the private setup link .../#code=<topic>&rail=<keys>.
   (function () {
-    var m = /^#code=([A-Za-z0-9_-]+)$/.exec(location.hash), code = null;
+    var m = /^#code=([A-Za-z0-9_-]+)(?:&rail=([A-Za-z0-9.]+))?$/.exec(location.hash), code = null;
     try {
-      if (m) { localStorage.setItem('trains-code', m[1]); history.replaceState(null, '', location.pathname); }
+      if (m) {
+        localStorage.setItem('trains-code', m[1]);
+        if (m[2]) localStorage.setItem('trains-rail', m[2]);
+        history.replaceState(null, '', location.pathname);
+      }
       code = localStorage.getItem('trains-code');
     } catch (e) {}
     if (code) trkCfg = { control: code };
@@ -543,16 +575,15 @@
     trkSave(); loadTrains();
   }
   function pts(group) { return ((group || [])[0] || {}).callingPoint || []; }
-  function getJson(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   // Find the train's National Rail service ID: on the boarding station's departures board if it
   // hasn't left yet, otherwise on the destination's arrivals board (which lists it until it arrives).
   var trkSid = null;
   function trkFindSid(want) {
-    return getJson(HUX + 'departures/' + want.from + '/to/' + want.to + '/15')
+    return railGet('departures/' + want.from + '/to/' + want.to + '/15')
       .then(function (d) {
         var s = (d.trainServices || []).filter(function (x) { return x.std === want.std; })[0];
         if (s) return s.serviceID;
-        return getJson(HUX + 'arrivals/' + want.to + '/from/' + want.from + '/15?expand=true').then(function (a) {
+        return railGet('arrivals/' + want.to + '/from/' + want.from + '/15?expand=true').then(function (a) {
           var t = (a.trainServices || []).filter(function (x) {
             return pts(x.previousCallingPoints).some(function (c) { return c.crs === want.from && c.st === want.std; });
           })[0];
@@ -584,7 +615,7 @@
         if (trk !== want) return null;
         trkSid = sid;
         if (!sid) return null;
-        return getJson(HUX + 'service/' + sid).then(trkFromService, function () { trkSid = null; return null; });
+        return railGet('service/' + sid).then(trkFromService, function () { trkSid = null; return null; });
       })
       .then(function (j) { if (trk !== want) return; if (j) trkLast = j; trkRender(j ? 'live' : 'missing'); })
       .catch(function () { if (trk === want) trkRender('error'); });
@@ -690,8 +721,7 @@
     bdSt.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.crs === crs ? 'true' : 'false'); });
     bdMd.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false'); });
     var key = crs + mode + bdOnly; bdLoading = key;
-    fetch(HUX + mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/10' + (arr ? '' : '?expand=true'), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    railGet(mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/10' + (arr ? '' : '?expand=true'))
       .then(function (d) {
         if (bdLoading !== key) return;
         var list = (d.trainServices || []).concat(d.busServices || []);
@@ -711,7 +741,7 @@
         });
         if (!list.length) html += '<div class="bd-row"><span></span><span>No ' + mode + ' in the next two hours</span></div>';
         // Disruption notices scroll along the bottom, like the real boards
-        var msg = (d.nrccMessages || []).map(function (m) { return new DOMParser().parseFromString(m.value || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean).join('   ·   ');
+        var msg = (d.nrccMessages || []).map(function (m) { return nrcc(m).replace(/\s+/g, ' ').trim(); }).filter(Boolean).join('   ·   ');
         html += '<div class="bd-foot"><span class="bd-msg">' + (msg
           ? '<span class="bd-tick" style="--bd-dur:' + Math.max(14, msg.length * 0.22).toFixed(0) + 's">' + esc(msg) + '</span>'
           : esc(BD_NAMES[crs])) + '</span><span class="bd-clock" id="bd-clock"></span></div>';
