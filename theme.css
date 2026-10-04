@@ -1,0 +1,152 @@
+/*
+ * The shared look for every family page (home, commute, weather, dinner, recipes) and the public
+ * trains.delnet.co.uk pages. Inspired by tartinebakery.com: cream paper, warm black ink, one ochre
+ * accent, a typewriter-style font, flat sections and big photographs. (The TV board keeps its own look.)
+ *
+ * Load it AFTER a page's own <style>, so these shared rules win:
+ *   <script src="/theme.js"></script>            in <head> (sets dark/light before the page draws)
+ *   <link rel="stylesheet" href="/theme.css">    after the page's <style>
+ *
+ * Dark mode follows the device, and the ☾/☀ button in the nav bar overrides it (remembered per device).
+ */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap");
+
+:root {
+  --text: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display: var(--text);
+  --bg: #f7f1ee;
+  --surface: #fffcfa;
+  --surface-2: #efe7e2;
+  --ink: #231f20;
+  --muted: #6b625e;
+  --edge: rgba(35, 31, 32, 0.14);
+  --line: var(--edge);
+  --accent: #9a5b12;        /* ochre, dark enough for text and links on cream */
+  --accent-fill: #c87e1e;   /* ochre for filled buttons */
+  --accent-ink: #231f20;
+  --tomato: #a8432f;
+  --gold: #8f6410;
+  --glass: var(--surface);
+  --glass-2: var(--surface-2);
+  --shadow: none;
+  --orb-a: transparent; --orb-b: transparent; --orb-c: transparent;
+  /* Chart series and warning colours (validated for colour-blind separation on these surfaces) */
+  --s1: #2f55b8; --s2: #a07a14; --rain: #2f55b8;
+  --warn-yellow: #8a6a00; --warn-amber: #b5651d; --warn-red: #b23a2a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171412; --surface: #211d1b; --surface-2: #2b2623; --ink: #f3ece7; --muted: #a99e98;
+    --edge: rgba(243, 236, 231, 0.13); --accent: #e3a04f; --accent-fill: #e19633; --accent-ink: #171412;
+    --tomato: #e8875f; --gold: #e9c46a; --s1: #5b86e8; --s2: #b8892a; --rain: #7fb2e5;
+    --warn-yellow: #e9c46a; --warn-amber: #f0a04b; --warn-red: #ff6a5a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171412; --surface: #211d1b; --surface-2: #2b2623; --ink: #f3ece7; --muted: #a99e98;
+  --edge: rgba(243, 236, 231, 0.13); --accent: #e3a04f; --accent-fill: #e19633; --accent-ink: #171412;
+  --tomato: #e8875f; --gold: #e9c46a; --s1: #5b86e8; --s2: #b8892a; --rain: #7fb2e5;
+  --warn-yellow: #e9c46a; --warn-amber: #f0a04b; --warn-red: #ff6a5a;
+  color-scheme: dark;
+}
+
+/* --- Base ------------------------------------------------------------------------ */
+html, body { background: var(--bg) !important; }
+body { font-family: var(--text); font-size: 15px; letter-spacing: 0.01em; color: var(--ink); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 500; letter-spacing: 0.01em; }
+h1 em { font-style: normal; background: none; -webkit-text-fill-color: currentColor; color: inherit; }
+a { color: var(--accent); }
+.sky, .grain, .top { display: none !important; }   /* the old glowing background and top bar */
+.wrap { padding-top: 0; padding-left: 20px; padding-right: 20px; }
+body { padding-left: 0 !important; padding-right: 0 !important; }   /* full-width nav and photos (the dinner pages padded the body) */
+
+/* Small uppercase, widely spaced labels */
+.label, .hello, .eyebrow, .rd-group, .fact .k, .dy.hd { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.7rem; font-weight: 500; }
+
+/* Flat sections: no glass, glow, gradients or rounded bubbles */
+.card {
+  background: var(--surface) !important; background-image: none !important;
+  border: 1px solid var(--edge); border-radius: 2px; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+a.card { transition: border-color 0.2s ease; }
+a.card:hover, a.card:focus-visible { transform: none !important; border-color: var(--accent); background: var(--surface) !important; }
+.arrow { border-radius: 2px; background: var(--accent-fill); color: var(--accent-ink); }
+a.card:hover .arrow { transform: translateX(4px); }
+
+/* Switches, pills and buttons: square and quiet; the chosen option is ink-on-paper inverted */
+.assumptions, .guide li, .oc, .staples, .panel, .recipe, .shop-card, .tr-switch, .tr-switch button, .rd-sum, .top-print, .bd-filter, .home-link, .rd-more, .who, .tag, button.copy, .tab, .trk-stop, .tr-track, .toc a, .legend > *, .ocado-send {
+  border-radius: 2px !important;
+}
+.tr-switch { background: transparent; border: 1px solid var(--edge); }
+.tr-switch button { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; }
+.tr-switch button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.tab[aria-selected="true"] { background: var(--ink) !important; color: var(--bg) !important; border-color: var(--ink) !important; }
+.tab[aria-selected="true"] small { color: var(--bg) !important; opacity: 0.75; }
+.rd-sum { background: var(--surface-2) !important; color: var(--ink) !important; letter-spacing: 0.04em; }
+.rd-sum.warn { background: color-mix(in srgb, var(--tomato) 18%, transparent) !important; color: var(--tomato) !important; }
+button.copy { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; }
+.ocado-send { background: var(--accent-fill) !important; border-color: var(--accent-fill) !important; color: var(--accent-ink) !important; }
+
+/* Online / not answering dots (home page): blue and warm red, both with a text legend */
+.dot.up { background: var(--s1) !important; box-shadow: 0 0 0 4px color-mix(in srgb, var(--s1) 22%, transparent) !important; }
+.dot.down { background: var(--tomato) !important; }
+
+/* Big numbers (temperatures, prices) stay large but in the same typewriter face */
+.wx-temp, .now-temp, .dinner .big, .travel-link .big, .fu-p { font-family: var(--display); font-weight: 500; letter-spacing: -0.02em; }
+
+footer { border-top: 1px solid var(--edge); padding-top: 18px; letter-spacing: 0.04em; font-size: 0.75rem; }
+
+/* --- Nav bar (added by theme.js) ------------------------------------------------- */
+.site-nav { position: sticky; top: 0; z-index: 40; background: var(--surface); border-bottom: 1px solid var(--edge); }
+.site-nav .in { max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 58px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+.site-nav .links { display: flex; gap: 20px; min-width: 0; }
+.site-nav a, .site-nav button { font: 500 0.72rem/1 var(--text); text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.site-nav .links a { padding: 6px 0; border-bottom: 1px solid transparent; }
+.site-nav .links a:hover, .site-nav .links a[aria-current="page"] { border-bottom-color: var(--accent); }
+.site-nav .wordmark { font-size: 1.02rem; font-weight: 400; letter-spacing: 0.42em; padding-left: 0.42em; }
+.site-nav .right { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.site-nav button { cursor: pointer; background: none; border: 1px solid var(--edge); border-radius: 2px; padding: 8px 10px; }
+.site-nav #theme-btn { font-size: 1rem; line-height: 1; padding: 6px 10px; }
+.site-nav .btn { background: var(--accent-fill); color: var(--accent-ink); border: 0; border-radius: 2px; padding: 9px 14px; }
+.site-nav a:focus-visible, .site-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.site-nav .more { display: none; }
+@media (max-width: 760px) {
+  .site-nav .in { grid-template-columns: auto 1fr auto; height: 54px; }
+  .site-nav .wordmark { font-size: 0.86rem; letter-spacing: 0.3em; }
+  .site-nav .links { display: none; }
+  .site-nav .more { display: inline-block; }
+  .site-nav.open .links { display: flex; flex-direction: column; gap: 0; position: absolute; left: 0; right: 0; top: 54px;
+    background: var(--surface); border-bottom: 1px solid var(--edge); padding: 6px 20px 12px; }
+  .site-nav.open .links a { padding: 12px 0; border-bottom: 1px solid var(--edge); }
+  .site-nav .btn { display: none; }
+}
+
+/* --- Photo header (each page sets --img and --img-s, the phone-size version) ------- */
+.photo-hero { box-sizing: border-box; padding: 0; width: 100%; position: relative; min-height: clamp(300px, 52vh, 640px); display: flex; align-items: flex-end; color: #fff;
+  background: #2b2623 var(--img) center / cover no-repeat; margin: 0 0 40px; }
+.photo-hero.short { min-height: clamp(240px, 38vh, 440px); }
+.photo-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(18, 14, 12, 0.78), rgba(18, 14, 12, 0.12) 62%); }
+.photo-hero .in { position: relative; width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 20px 34px; }
+.photo-hero .kicker { margin: 0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.18em; opacity: 0.9; }
+.photo-hero h1 { margin: 10px 0 12px; color: #fff; font-size: clamp(1.7rem, 4.2vw, 2.7rem); font-weight: 400; line-height: 1.15; letter-spacing: 0.08em; }
+.photo-hero .sub { margin: 0; max-width: 40ch; line-height: 1.75; letter-spacing: 0.05em; font-size: 0.92rem; opacity: 0.92; }
+.photo-hero .credit { position: absolute; right: 12px; bottom: 8px; font-size: 0.62rem; letter-spacing: 0.04em; opacity: 0.75; color: #fff; }
+.photo-hero .credit a { color: inherit; }
+@media (max-width: 700px) { .photo-hero { background-image: var(--img-s, var(--img)); } .photo-hero .credit { left: 20px; right: auto; } }
+
+/* --- Print: plain black on white, no photos, nav or buttons ------------------------ */
+@media print {
+  html:root:root, html:root:root[data-theme] {
+    --bg: #fff !important; --surface: #fff !important; --surface-2: #fff !important; --ink: #111 !important; --muted: #555 !important;
+    --edge: #ccc !important; --line: #ccc !important; --accent: #111 !important; --glass: #fff !important; --glass-2: #fff !important;
+    color-scheme: light !important;
+  }
+  html, body { background: #fff !important; color: #111 !important; }
+  .site-nav, .photo-hero .credit, .photo-hero::before { display: none !important; }
+  .photo-hero { min-height: 0 !important; background: none !important; color: #111 !important; margin-bottom: 16px; }
+  .photo-hero h1 { color: #111 !important; }
+  .photo-hero .in { padding: 0; }
+}

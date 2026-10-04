@@ -1,54 +1,20 @@
 <!doctype html>
 <html lang="en-GB">
-<head>
+<head><script src="/theme.js?v=75f1e82d"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The Weather</title>
 <meta name="theme-color" content="#0c1020">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
-  :root {
-    --bg: #0c1020;
-    --ink: #eef1f8;
-    --muted: #9aa3bd;
-    --glass: rgba(255,255,255,0.055);
-    --glass-2: rgba(255,255,255,0.09);
-    --edge: rgba(255,255,255,0.11);
-    --accent: #8fb3ff;
-    --tomato: #e8875f;
-    --gold: #e9c46a;
-    --orb-a: #2a4596;
-    --orb-b: #b4532a;
-    --orb-c: #6a5acd;
-    --shadow: 0 20px 60px -30px rgba(0,0,0,0.8);
-    color-scheme: dark;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --bg: #f3f5fa;
-      --ink: #171c2e;
-      --muted: #5b6480;
-      --glass: rgba(255,255,255,0.55);
-      --glass-2: rgba(255,255,255,0.8);
-      --edge: rgba(23,28,46,0.1);
-      --accent: #2f55b8;
-      --tomato: #b4532a;
-      --gold: #a07a14;
-      --orb-a: #a9c2f5;
-      --orb-b: #f2b38f;
-      --orb-c: #b9b0f0;
-      --shadow: 0 20px 50px -30px rgba(23,28,46,0.35);
-      color-scheme: light;
-    }
-  }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: "Work Sans", -apple-system, "Segoe UI", sans-serif;
+    font-family: var(--text);
     line-height: 1.5;
     overflow-x: hidden;
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -79,7 +45,7 @@
   .hero { margin-bottom: 48px; }
   .hello { color: var(--accent); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.8rem; margin: 0 0 14px; }
   h1 {
-    font-family: "Fraunces", Georgia, serif; font-weight: 700;
+    font-family: var(--display); font-weight: 700;
     font-size: clamp(3rem, 11vw, 7.5rem); line-height: 0.92; letter-spacing: -0.03em; margin: 0;
   }
   h1 em { font-style: italic; font-weight: 500;
@@ -99,18 +65,15 @@
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
   /* --- Weather page --------------------------------------------------------- */
-  /* Chart series colours (validated for colour-blind separation and contrast on each surface) */
-  :root { --s1: #5b86e8; --s2: #b8892a; --warn-yellow: #e9c46a; --warn-amber: #f0a04b; --warn-red: #ff6a5a; }
-  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --s1: #2f55b8; --s2: #a07a14; --warn-yellow: #8a6a00; --warn-amber: #b5651d; --warn-red: #c0392b; } }
   .wide { grid-column: span 6; }
   .half { grid-column: span 3; }
-  .card h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 0 0 14px; }
+  .card h2 { font-family: var(--display); font-weight: 600; font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 0 0 14px; }
   .muted { color: var(--muted); }
 
   .wx-ico { display: inline-flex; width: 28px; height: 28px; flex: none; }
   .wx-ico.big { width: 76px; height: 76px; }
   .wx-ico svg { width: 100%; height: 100%; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-  .wx-ico .sun { stroke: var(--gold); } .wx-ico .cloud { stroke: var(--ink); } .wx-ico .rain { stroke: #7fb2e5; } .wx-ico .moon { stroke: var(--muted); } .wx-ico .snow { stroke: var(--ink); }
+  .wx-ico .sun { stroke: var(--gold); } .wx-ico .cloud { stroke: var(--ink); } .wx-ico .rain { stroke: var(--rain); } .wx-ico .moon { stroke: var(--muted); } .wx-ico .snow { stroke: var(--ink); }
 
   .warn { grid-column: span 6; display: flex; gap: 14px; align-items: flex-start; border-left: 6px solid var(--warn-yellow); }
   .warn.amber { border-left-color: var(--warn-amber); } .warn.red { border-left-color: var(--warn-red); }
@@ -124,7 +87,7 @@
   .now { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 28px; align-items: center;
     background: linear-gradient(135deg, color-mix(in srgb, var(--orb-c) 22%, transparent), transparent 60%), var(--glass); }
   .now-main { display: flex; align-items: center; gap: 18px; }
-  .now-temp { font-family: "Fraunces", Georgia, serif; font-size: 5.2rem; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .now-temp { font-family: var(--display); font-size: 5.2rem; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
   .now-desc { font-weight: 600; font-size: 1.15rem; margin: 6px 0 2px; }
   .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; }
   .fact .k { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -135,7 +98,7 @@
   .hr { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-radius: 12px; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .hr.day0 { background: var(--glass-2); }
   .hr b { color: var(--ink); font-size: 1rem; font-weight: 600; }
-  .hr .rain { color: #7fb2e5; font-size: 0.74rem; min-height: 1.1em; }
+  .hr .rain { color: var(--rain); font-size: 0.74rem; min-height: 1.1em; }
   .hr .wind { font-size: 0.72rem; }
   .hr .newday { color: var(--ink); font-weight: 600; }
 
@@ -163,7 +126,7 @@
   .dy .name { font-weight: 600; }
   .dy .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
   .dy .rng b { font-weight: 600; } .dy .rng span { color: var(--muted); }
-  .dy .rain { color: #7fb2e5; }
+  .dy .rain { color: var(--rain); }
   .dy .r { text-align: right; }
 
   details.table { margin-top: 10px; font-size: 0.85rem; }
@@ -200,25 +163,18 @@
     .card, .arrow { transition: none; }
   }
 </style>
+<link rel="stylesheet" href="/theme.css?v=a5ed3833">
 <body>
-<div class="sky" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
-<div class="grain" aria-hidden="true"></div>
 
-<div class="wrap">
-  <div class="top">
-    <a class="mark" href="/" style="color:inherit;text-decoration:none">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15 16 5l12 10v12a1 1 0 0 1-1 1h-7v-8h-8v8H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      Jackson&#39;s Commute
-    </a>
-    <div style="display:flex;align-items:center;gap:14px"><a href="/" class="top-print">← Commute</a><div class="clock" id="clock">--:--</div></div>
+<div class="photo-hero short" style="--img:url(/img/weather-1600.jpg);--img-s:url(/img/weather-1000.jpg)">
+  <div class="in">
+    <p class="kicker" id="where">Met Office forecast</p>
+    <h1>The Weather</h1>
+    <p class="sub" id="date"></p>
   </div>
-
-  <section class="hero">
-    <p class="hello" id="where">Met Office forecast</p>
-    <h1>The <em>Weather</em></h1>
-    <p class="date" id="date"></p>
-  </section>
-
+  <span class="credit">Photo: <a href="https://commons.wikimedia.org/wiki/File:November_Skies_(22432480037).jpg" target="_blank" rel="noopener">November skies</a> by Amanda Slater from Coventry, West Midlands, UK, <a href="https://creativecommons.org/licenses/by-sa/2.0" target="_blank" rel="noopener">CC BY-SA 2.0</a></span>
+</div>
+<div class="wrap">
   <main class="grid" id="grid">
     <div id="warnings" style="display:contents"></div>
 
@@ -278,7 +234,7 @@
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   function tick() {
     var now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    var ck = document.getElementById('clock'); if (ck) ck.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('date').textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
   tick(); setInterval(tick, 15000);
