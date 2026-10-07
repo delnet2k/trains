@@ -221,6 +221,7 @@
   .fu-txt b { display: block; font-weight: 600; font-size: 0.92rem; line-height: 1.35; }
   .fu-txt span { display: block; font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fu-txt .shut { color: var(--tomato); font-weight: 600; }
+  .fu-txt .fu-real { color: var(--ink); white-space: normal; }
   .fu-pin { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gold); margin-left: 6px; }
   .fu-side { text-align: right; font-size: 0.8rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .fu-side a { display: block; color: var(--accent); font-weight: 600; text-decoration: none; margin-top: 2px; }
@@ -343,13 +344,14 @@
       <div class="tr-head">
         <div>
           <p class="label" id="fu-label">Fuel · within 10 miles</p>
-          <h2 id="fu-h">Cheapest fuel</h2>
+          <h2 id="fu-h">Best value fuel</h2>
           <span class="rd-sum" id="fu-sum">Checking…</span>
         </div>
         <div class="tr-switch fu-switch" role="tablist" aria-label="Fuel">
-          <button type="button" role="tab" data-fuel="E10" aria-selected="true">Unleaded</button>
+          <button type="button" role="tab" data-fuel="defender" aria-selected="true">Defender</button>
+          <button type="button" role="tab" data-fuel="kia" aria-selected="false">Kia</button>
+          <button type="button" role="tab" data-fuel="E10" aria-selected="false">Unleaded</button>
           <button type="button" role="tab" data-fuel="E5" aria-selected="false">Super</button>
-          <button type="button" role="tab" data-fuel="B7_STANDARD" aria-selected="false">Diesel</button>
         </div>
       </div>
       <div id="fu-list" aria-live="polite"></div>
@@ -754,10 +756,26 @@
   loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000);
 
   // polls it every 15 minutes (it needs a client secret, so the browser can't) and writes data/fuel.json.
-  var FU_SHOW = 6, fuKind = 'E10', fuData = null, fuOpen = false;
-  try { fuKind = localStorage.getItem('fuel-kind') || 'E10'; } catch (e) {}
-  var FU_NAMES = { E10: 'Unleaded', E5: 'Super unleaded', B7_STANDARD: 'Diesel' };
+  // The Defender and Kia views rank forecourts by what a fill-up really costs: the pump price
+  // plus the diesel burnt driving there and back (straight-line miles x 1.3 for the roads).
+  // Picked forecourts (the Esso at Capel St Mary) are on a regular route, so no trip cost.
+  var FU_VIEWS = {
+    defender: { fuel: 'B7_STANDARD', name: 'Defender', mpg: 23, litres: 60 },
+    kia: { fuel: 'B7_STANDARD', name: 'Kia', mpg: 40, litres: 40 },
+    E10: { fuel: 'E10', name: 'Unleaded' },
+    E5: { fuel: 'E5', name: 'Super unleaded' }
+  };
+  var FU_SHOW = 6, FU_ROAD = 1.3, fuView = 'defender', fuData = null, fuOpen = false;
+  try { fuView = localStorage.getItem('fuel-view') || 'defender'; } catch (e) {}
+  if (!FU_VIEWS[fuView]) fuView = 'defender';
   var fuButtons = document.querySelectorAll('.fu-switch button');
+  // Pence per litre including the trip, for a car view; the pump price otherwise
+  function fuReal(st, v) {
+    var p = st.prices[v.fuel].p;
+    if (!v.mpg || st.extra) return p;
+    var tripLitres = 2 * st.miles * FU_ROAD / v.mpg * 4.54609;
+    return p * (v.litres + tripLitres) / v.litres;
+  }
   function fuOpenNow(st, now) {
     if (st.fuel_24h) return { open: true, txt: 'Pumps open 24h' };
     var h = (st.hours || {})[(now.getDay() + 6) % 7];
@@ -773,26 +791,30 @@
     return d >= 7 ? 'price from ' + new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
   }
   function fuRow(st, best, now) {
-    var pr = st.prices[fuKind], o = fuOpenNow(st, now), age = fuAge(pr.at, now);
+    var v = FU_VIEWS[fuView], pr = st.prices[v.fuel], o = fuOpenNow(st, now), age = fuAge(pr.at, now), real = fuReal(st, v);
     var where = [st.address, st.town].filter(Boolean).join(', ');
-    return '<div class="fu-row' + (pr.p === best ? ' best' : '') + '">' +
+    var cost = v.mpg ? '<span class="fu-real">' + (st.extra ? 'On the way, no trip cost' : real.toFixed(1) + 'p a litre with the trip') +
+      ' · £' + (real * v.litres / 100).toFixed(2) + ' for ' + v.litres + ' L</span>' : '';
+    return '<div class="fu-row' + (real === best ? ' best' : '') + '">' +
       '<span class="fu-p">' + pr.p.toFixed(1) + '<small>p</small>' + (age ? '<span class="fu-old">' + esc(age) + '</span>' : '') + '</span>' +
       '<span class="fu-txt"><b>' + esc(st.brand) + ' · ' + esc(st.town) + (st.extra ? '<span class="fu-pin">★ Picked</span>' : '') + '</b>' +
-      '<span>' + esc(where) + '</span>' +
+      cost + '<span>' + esc(where) + '</span>' +
       (st.closed ? '<span class="shut">Temporarily closed</span>' : o.txt ? '<span' + (o.open === false ? ' class="shut"' : '') + '>' + esc(o.txt) + '</span>' : '') + '</span>' +
       '<span class="fu-side">' + st.miles + ' mi<a href="https://maps.apple.com/?daddr=' + st.lat + ',' + st.lon + '" target="_blank" rel="noopener">Directions</a></span></div>';
   }
   function renderFuel() {
-    fuButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.fuel === fuKind ? 'true' : 'false'); });
+    fuButtons.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.fuel === fuView ? 'true' : 'false'); });
     if (!fuData) return;
-    var now = new Date();
-    var list = (fuData.stations || []).filter(function (st) { return st.prices && st.prices[fuKind]; })
-      .sort(function (a, b) { return a.prices[fuKind].p - b.prices[fuKind].p || a.miles - b.miles; });
+    var now = new Date(), v = FU_VIEWS[fuView];
+    var list = (fuData.stations || []).filter(function (st) { return st.prices && st.prices[v.fuel]; })
+      .sort(function (a, b) { return fuReal(a, v) - fuReal(b, v) || a.miles - b.miles; });
     var open = list.filter(function (st) { return !st.closed; });
-    var best = open.length ? open[0].prices[fuKind].p : null;
-    document.getElementById('fu-label').textContent = 'Fuel · within ' + fuData.radius_miles + ' miles';
+    var best = open.length ? fuReal(open[0], v) : null;
+    document.getElementById('fu-label').textContent = 'Fuel · within ' + fuData.radius_miles + ' miles' +
+      (v.mpg ? ' · ' + v.name + ', diesel, ' + v.mpg + ' mpg, ' + v.litres + ' L fill' : '');
     var sum = document.getElementById('fu-sum');
-    sum.textContent = best ? FU_NAMES[fuKind] + ' from ' + best.toFixed(1) + 'p' : 'No prices';
+    sum.textContent = !best ? 'No prices' : v.mpg ? 'Best value: ' + open[0].brand + ' ' + open[0].town + ', ' + best.toFixed(1) + 'p with the trip'
+      : v.name + ' from ' + best.toFixed(1) + 'p';
     var shown = fuOpen ? list : list.slice(0, FU_SHOW);
     var html = shown.map(function (st) { return fuRow(st, best, now); }).join('');
     // Picked forecourts always show, even if they're not among the cheapest
@@ -816,8 +838,8 @@
   }
   fuButtons.forEach(function (b) {
     b.addEventListener('click', function () {
-      fuKind = b.dataset.fuel; fuOpen = false;
-      try { localStorage.setItem('fuel-kind', fuKind); } catch (e) {}
+      fuView = b.dataset.fuel; fuOpen = false;
+      try { localStorage.setItem('fuel-view', fuView); } catch (e) {}
       renderFuel();
     });
   });
