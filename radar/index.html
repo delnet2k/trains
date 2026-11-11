@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en-GB">
+<head><script src="/theme.js?v=c698c642"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Plane Radar</title>
+<meta name="theme-color" content="#0c1020">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/img/app-192.png">
+<link rel="apple-touch-icon" href="/img/app-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Commute">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--text); line-height: 1.5; overflow-x: hidden;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .wrap { position: relative; max-width: 1040px; margin: 0 auto; padding: 0 20px 48px; }
+  .head { padding: 28px 0 20px; }
+  .head h1 { margin: 6px 0 8px; font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 400; line-height: 1.15; }
+  .label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .rd-sum { display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .card { position: relative; padding: 18px; }
+  .ra { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (min-width: 860px) { .ra { grid-template-columns: minmax(0, 520px) minmax(0, 1fr); } }
+  /* The radar itself: amber on black, like the station boards and the TV */
+  .ra-scope { background: #050505; border: 1px solid #222; border-radius: 12px; padding: 6px; max-width: 560px; width: 100%; margin: 0 auto; }
+  .ra-scope svg { display: block; width: 100%; aspect-ratio: 1; font-family: "Doto", ui-monospace, Menlo, monospace; font-weight: 900; }
+  .ra-scope .pl { cursor: pointer; }
+  .ra-note { margin: 0; padding: 30% 8% ; text-align: center; color: #ffb000; font-family: "Doto", ui-monospace, Menlo, monospace; font-weight: 900; }
+  .ra-note small { display: block; margin-top: 8px; color: #a77400; font-size: 0.8rem; }
+  .fl-row { display: grid; grid-template-columns: 8ch minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 10px 6px; margin: 0;
+    border: 0; border-top: 1px solid var(--edge); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .fl-row:first-child { border-top: 0; }
+  .fl-row[aria-pressed="true"] { background: var(--surface-2); }
+  .fl-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .fl-call { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fl-row.low .fl-call { color: var(--gold); }
+  .fl-txt { min-width: 0; }
+  .fl-txt b { display: block; font-weight: 600; font-size: 0.92rem; line-height: 1.35; }
+  .fl-txt span, .fl-side small { display: block; font-size: 0.8rem; color: var(--muted); }
+  .fl-txt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fl-side { text-align: right; font-size: 0.9rem; white-space: nowrap; }
+  .tr-empty { margin: 6px 0; color: var(--muted); }
+  .tr-foot { margin: 12px 0 0; font-size: 0.76rem; color: var(--muted); }
+  footer { margin-top: 44px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 0.82rem; }
+</style>
+<link rel="stylesheet" href="/theme.css?v=a5ed3833">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="head">
+    <p class="label" id="ra-label">Overhead · live</p>
+    <h1>Plane Radar</h1>
+    <span class="rd-sum" id="ra-sum">Checking…</span>
+  </div>
+  <main>
+    <section class="card ra" aria-label="Planes overhead">
+      <div class="ra-scope" id="ra-scope"><p class="ra-note">Loading…</p></div>
+      <div>
+        <div id="ra-list" aria-live="polite"></div>
+        <p class="tr-foot" id="ra-foot"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Planes near Kelvedon station</span>
+    <span>Aircraft positions: adsb.fi · usual routes: adsbdb.com</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  var CENTRE_NAME = 'Kelvedon station';
+  // Where the planes come from: a relay that the radar at home feeds only while this page is open
+  // somewhere. An empty answer means it is just waking up; 404 means the relay hasn't been set up.
+  function getFeed() {
+    return fetch("https://ppqlwnqpimictchkpqyu.supabase.co" + '/rest/v1/rpc/radar_get', { method: 'POST', cache: 'no-store', body: '{}',
+      headers: { apikey: "sb_publishable_UoMfluUBvmWgHxPD3gvBaA_zxN6LudO", 'Content-Type': 'application/json' } })
+      .then(function (r) { if (r.status === 404) return { off: true }; if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { return d || { waking: true }; });
+  }
+
+  var EVERY = 10 * 1000, last = null, sel = null, timer = null, wakingSince = 0;
+  var COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  function feet(alt) { return alt == null ? '–' : (Math.round(alt / 100) * 100).toLocaleString('en-GB') + ' ft'; }
+  function whereFrom(p) {      // "2.3 mi NE" of the centre
+    var mi = p.nm * 1.15078, b = (Math.atan2(p.x, p.y) * 180 / Math.PI + 360) % 360;
+    return mi < 0.5 ? 'right overhead' : (mi < 9.5 ? mi.toFixed(1) : Math.round(mi)) + ' mi ' + COMPASS[Math.round(b / 45) % 8];
+  }
+  // Planes in the air, nearest first, with x / y in nautical miles east / north of the centre
+  function planes(d) {
+    var c = d.centre || d.home, k = Math.cos(c[0] * Math.PI / 180);
+    return (d.planes || []).filter(function (p) { return !p.gnd; }).map(function (p) {
+      p.x = (p.lon - c[1]) * 60 * k; p.y = (p.lat - c[0]) * 60; p.nm = Math.sqrt(p.x * p.x + p.y * p.y); return p;
+    }).sort(function (a, b) { return a.nm - b.nm; });
+  }
+  function low(p) { return p.alt != null && p.alt < 4000; }
+  function radarSvg(d, pl) {
+    var R = d.radius_nm, sc = 46 / R, o = '<svg viewBox="0 0 100 100" role="img" aria-label="Radar, north at the top">';
+    o += '<g stroke="#4a3500" stroke-width="0.3" fill="none"><path d="M50 ' + (50 - R * sc) + 'V' + (50 + R * sc) + 'M' + (50 - R * sc) + ' 50H' + (50 + R * sc) + '"/>';
+    var RINGS = [5, 10];
+    RINGS.forEach(function (r) { var rn = r / 1.15078; if (rn <= R) o += '<circle cx="50" cy="50" r="' + (rn * sc).toFixed(2) + '"/>'; });
+    o += '</g><g fill="#a77400" font-size="3.2">';
+    RINGS.forEach(function (r) { var rn = r / 1.15078; if (rn <= R) o += '<text x="51" y="' + (50 - rn * sc + 3.4).toFixed(2) + '">' + r + ' mi</text>'; });
+    o += '<text x="48.8" y="3.2">N</text></g><rect x="49.3" y="49.3" width="1.4" height="1.4" fill="#ffb000"/>';
+    pl.forEach(function (p, i) {
+      if (p.nm > R) return;
+      var px = 50 + p.x * sc, py = 50 - p.y * sc, col = low(p) ? '#ffd766' : '#ffb000', on = p.id === sel;
+      o += '<g class="pl" data-id="' + esc(p.id) + '"><circle cx="' + px.toFixed(2) + '" cy="' + py.toFixed(2) + '" r="5" fill="#050505" fill-opacity="0.01"' +
+        (on ? ' stroke="#fff" stroke-width="0.5"' : '') + '/>' +
+        '<path fill="' + col + '" d="M0 -2.9L1.8 2.2L0 1L-1.8 2.2Z" transform="translate(' + px.toFixed(2) + ' ' + py.toFixed(2) + ') rotate(' + Math.round(p.trk || 0) + ')"/>';
+      if (i < 8 || on) {
+        var right = px > 70;
+        o += '<text fill="' + (on ? '#fff' : col) + '" font-size="3" text-anchor="' + (right ? 'end' : 'start') + '" x="' + (px + (right ? -3.5 : 3.5)).toFixed(2) +
+          '" y="' + (py + 1).toFixed(2) + '">' + esc(p.call || p.reg || '') + '</text>';
+      }
+      o += '</g>';
+    });
+    return o + '</svg>';
+  }
+  function row(p) {
+    var arrow = p.vs > 300 ? ' ↑' : p.vs < -300 ? ' ↓' : '', r = p.route;
+    var sub = [r && r.airline, p.type, r && (r.from.code + '–' + r.to.code)].filter(Boolean).join(' · ');
+    return '<button type="button" class="fl-row' + (low(p) ? ' low' : '') + '" data-id="' + esc(p.id) + '" aria-pressed="' + (p.id === sel ? 'true' : 'false') + '">' +
+      '<span class="fl-call">' + esc(p.call || p.reg || p.id) + '</span>' +
+      '<span class="fl-txt"><b>' + esc(r ? r.from.city + ' → ' + r.to.city : 'Route not known') + '</b><span>' + esc(sub || 'No details') + '</span></span>' +
+      '<span class="fl-side">' + feet(p.alt) + arrow + '<small>' + esc(whereFrom(p)) + (p.gs ? ' · ' + Math.round(p.gs * 1.15078) + ' mph' : '') + '</small></span></button>';
+  }
+  function note(big, small) {
+    document.getElementById('ra-scope').innerHTML = '<p class="ra-note">' + esc(big) + (small ? '<small>' + esc(small) + '</small>' : '') + '</p>';
+    document.getElementById('ra-list').innerHTML = '';
+  }
+  function pill(text, warn) { var s = document.getElementById('ra-sum'); s.textContent = text; s.className = 'rd-sum' + (warn ? ' warn' : ''); }
+  function render() {
+    var d = last;
+    if (!d) return;
+    if (d.off) { pill('Not switched on', true); note('The radar is not switched on yet', 'It needs one more step at home.'); return; }
+    if (d.waking) {
+      var long = Date.now() - wakingSince > 60 * 1000;
+      pill(long ? 'No answer' : 'Waking up…', long);
+      note(long ? 'No answer from the radar' : 'Waking the radar…', long ? 'Still trying every few seconds.' : 'Planes appear in about ten seconds.');
+      return;
+    }
+    if ((Date.now() - new Date(d.updated)) / 1000 > 180) { pill('Out of date', true); note('Flight data is out of date', 'Trying again every few seconds.'); return; }
+    var pl = planes(d), mi = Math.round(d.radius_nm * 1.15078);
+    if (sel && !pl.some(function (p) { return p.id === sel; })) sel = null;
+    document.getElementById('ra-label').textContent = 'Overhead · within ' + mi + ' miles · live';
+    pill(pl.length ? pl.length + ' overhead now' : 'Nothing overhead');
+    document.getElementById('ra-scope').innerHTML = radarSvg(d, pl);
+    document.getElementById('ra-list').innerHTML = pl.map(row).join('') || '<p class="tr-empty">Nothing overhead right now.</p>';
+    document.getElementById('ra-foot').textContent = 'Centre is ' + CENTRE_NAME + ' · north is up · paler planes are below 4,000 ft · tap a plane to pick it out · updated ' +
+      new Date(d.updated).toLocaleTimeString('en-GB');
+    document.querySelectorAll('.pl, .fl-row').forEach(function (el) {
+      el.addEventListener('click', function () { sel = sel === el.dataset.id ? null : el.dataset.id; render(); });
+    });
+  }
+  function load() {
+    clearTimeout(timer);
+    if (document.hidden) return;                    // nobody looking: stop asking (and let the relay rest)
+    getFeed().then(function (d) {
+      if (d.waking) { if (!wakingSince) wakingSince = Date.now(); } else wakingSince = 0;
+      last = d; render();
+      timer = setTimeout(load, d.waking ? 4000 : d.off ? 60 * 1000 : EVERY);
+    }, function () {
+      if (!last || last.waking || last.off) { pill('Unavailable', true); note("Couldn't load the flight data", 'Trying again every few seconds.'); }
+      else render();                                // keep the last picture; it greys out to "out of date" by itself
+      timer = setTimeout(load, EVERY);
+    });
+  }
+  document.addEventListener('visibilitychange', load);
+  load();
+})();
+</script>
+</body>
+</html>

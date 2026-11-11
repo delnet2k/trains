@@ -3,7 +3,7 @@
  * Load it in <head> WITHOUT defer, so a saved light/dark choice applies before the page draws:
  *   <script src="/theme.js"></script>
  *
- * On trains.delnet.co.uk (the public site) the nav only offers the public pages.
+ * On trains.delnet.co.uk (the public site) the nav only offers the public pages: Commute, Weather, Radar.
  */
 (function () {
   var root = document.documentElement;
@@ -11,8 +11,8 @@
 
   var PUBLIC = /(^|\.)delnet\.co\.uk$/.test(location.hostname) || location.hostname.indexOf('github.io') > -1;
   var LINKS = PUBLIC
-    ? [['Commute', '/'], ['Weather', '/weather/']]
-    : [['Home', '/'], ['Commute', '/travel/'], ['Weather', '/weather/'], ['Dinner', '/dinner/'], ['Recipes', '/dinner/recipes.html']];
+    ? [['Commute', '/'], ['Weather', '/weather/'], ['Radar', '/radar/']]
+    : [['Home', '/'], ['Commute', '/travel/'], ['Weather', '/weather/'], ['Radar', '/radar/'], ['Dinner', '/dinner/'], ['Recipes', '/dinner/recipes.html']];
   var WORDMARK = PUBLIC ? 'Commute' : 'Jacksons';
 
   function dark() {

@@ -1,10 +1,16 @@
 <!doctype html>
 <html lang="en-GB">
-<head><script src="/theme.js?v=75f1e82d"></script>
+<head><script src="/theme.js?v=c698c642"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Jackson&#39;s Commute</title>
 <meta name="theme-color" content="#0c1020">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/img/app-192.png">
+<link rel="apple-touch-icon" href="/img/app-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Commute">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&display=swap" rel="stylesheet">
@@ -210,6 +216,16 @@
     .bd-late, .bd-bad { color: #111 !important; text-shadow: none !important; }
     .bd-calling span, .bd-tick { animation: none !important; padding-left: 0 !important; white-space: normal; } .bd-msg { white-space: normal !important; }
   }
+  .tr-len { white-space: nowrap; }
+  .trk-sub a, .tr-setup a { color: var(--accent); font-weight: 600; }
+  .tr-setup button { padding: 0; }
+  .tr-setup input { display: block; width: 100%; max-width: 520px; margin-top: 8px; font: inherit; font-size: 0.8rem; padding: 8px 10px;
+    border: 1px solid var(--edge); border-radius: 2px; background: var(--surface-2); color: var(--ink); }
+  .tube { grid-column: span 6; }
+  .tu-row { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--edge); }
+  .tu-bar { align-self: stretch; min-height: 22px; border-radius: 2px; }
+  .tu-row .rd-txt span { display: block; }
+  .tu-row .tr-st { white-space: normal; text-align: right; max-width: 15ch; }
   .roads { grid-column: span 6; }
   .fuel { grid-column: span 6; }
   .roadworks { grid-column: span 6; }
@@ -336,6 +352,18 @@
       <p class="tr-foot" id="tr-foot"></p>
     </section>
 
+    <section class="card tube" aria-labelledby="tu-h">
+      <div class="tr-head">
+        <div>
+          <p class="label">Tube · at Liverpool Street</p>
+          <h2 id="tu-h">Onward from Liverpool Street</h2>
+          <span class="rd-sum" id="tu-sum">Checking…</span>
+        </div>
+      </div>
+      <div id="tu-list" aria-live="polite"></div>
+      <p class="tr-foot" id="tu-foot"></p>
+    </section>
+
     <section class="card roads" aria-labelledby="rd-h">
       <div class="tr-head">
         <div>
@@ -376,6 +404,13 @@
 <script>
 (function () {
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  // Opened from the phone's home screen, this page can sit in the background for hours. Each card
+  // adds its loader to `wakers`, and they all run again when the page comes back into view.
+  var wakers = [], hidAt = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { hidAt = Date.now(); return; }
+    if (Date.now() - hidAt > 30 * 1000) wakers.forEach(function (f) { f(); });
+  });
   // Train times come from National Rail's own feed (Rail Data Marketplace) using the family's
   // keys, or from the free Huxley service when there are no keys or the feed fails. Both answer
   // with the same JSON, so callers ask for Huxley-style paths: departures/KEL/to/LST/10,
@@ -502,7 +537,8 @@
           var arr = trArrival(s, r.to);
           html += '<div class="tr-row' + (st.text === 'Cancelled' ? ' cancelled' : '') + '">' +
             '<span class="tr-dep">' + (late ? '<s>' + s.std + '</s>' + s.etd : s.std) + '</span>' +
-            '<span class="tr-to">' + (arr ? '<b>' + arr + '</b> · ' : '') + esc(s.destination[0].locationName) + '</span>' +
+            '<span class="tr-to">' + (arr ? '<b>' + arr + '</b> · ' : '') + esc(s.destination[0].locationName) +
+              (+s.length > 0 ? ' · <span class="tr-len">' + (+s.length) + ' coaches</span>' : '') + '</span>' +
             '<span class="tr-plat">' + (s.platform ? 'Plat ' + esc(s.platform) : '–') + '</span>' +
             '<span class="tr-st ' + st.cls + '"' + (s.cancelReason || s.delayReason ? ' title="' + esc(s.cancelReason || s.delayReason) + '"' : '') + '>' + st.text + '</span>' +
             trTrackBtn(r, s.std) + '</div>';
@@ -543,10 +579,23 @@
     } catch (e) {}
     if (code) trkCfg = { control: code };
     var foot = document.getElementById('tr-foot'), note = document.createElement('p');
-    note.className = 'tr-foot';
-    note.textContent = code ? 'Phone alerts are on for this phone.' : 'Tracking works on this page. Phone alerts need the family setup link.';
-    if (m) note.textContent = 'Phone alerts set up for this phone. Tap Track on a train to get alerts.';
+    note.className = 'tr-foot tr-setup';
+    note.textContent = code ? 'Phone alerts are on for this phone. ' : 'Tracking works on this page. Phone alerts need the family setup link. ';
+    if (m) note.textContent = 'Phone alerts set up for this phone. Tap Track on a train to get alerts. ';
     foot.parentNode.insertBefore(note, foot.nextSibling);
+    // An app on the home screen keeps its own storage, so the link can be pasted in here too
+    var btn = document.createElement('button'), box = document.createElement('input');
+    btn.type = 'button'; btn.className = 'rd-more'; btn.textContent = code ? 'Set up again' : 'Set up this phone';
+    box.type = 'text'; box.hidden = true; box.placeholder = 'Paste the family setup link here';
+    box.setAttribute('aria-label', 'Family setup link'); box.autocapitalize = 'off'; box.autocomplete = 'off'; box.spellcheck = false;
+    btn.addEventListener('click', function () { box.hidden = false; box.focus(); });
+    box.addEventListener('input', function () {
+      var p = /#code=([A-Za-z0-9_-]+)(?:&rail=([A-Za-z0-9.]+))?\s*$/.exec(box.value);
+      if (!p) return;
+      try { localStorage.setItem('trains-code', p[1]); if (p[2]) localStorage.setItem('trains-rail', p[2]); } catch (e) { return; }
+      location.reload();
+    });
+    note.appendChild(btn); note.appendChild(box);
   })();
   function trkSend(cmd) {
     if (!trkCfg) return;
@@ -629,6 +678,8 @@
     if (/^\d\d:\d\d$/.test(c.et || '')) return '<s>' + esc(sched) + '</s> <b class="late">' + esc(c.et) + '</b>';
     return esc(sched) + (c.et === 'Delayed' ? ' <b class="late">delayed</b>' : '');
   }
+  // Greater Anglia pays Delay Repay from 15 minutes late at the destination
+  var REPAY_MIN = 15, REPAY = ' <a href="https://www.greateranglia.co.uk/delayrepay" target="_blank" rel="noopener">Claim Delay Repay</a>';
   function lateTag(sched, t) { var n = lateBy(sched, t); return n > 1 ? ' <span class="late">(' + n + ' min late)</span>' : ' (on time)'; }
   function trkRender(state) {
     var box = document.getElementById('trk'), j = trkLast;
@@ -651,10 +702,10 @@
       var lateTxt = late > 1 ? ' <span class="late">(' + late + ' min late)</span>' : !j.cancelled ? ' · on time' : '';
       if (j.cancelled) {
         now = title + ' is cancelled';
-        sub = j.reason ? esc(j.reason) : '';
+        sub = (j.reason ? esc(j.reason) + ' · ' : '') + 'If you get in ' + REPAY_MIN + ' minutes or more late:' + REPAY;
       } else if (dest.at || (state === 'missing' && k === st.length - 2 && mins(destT) !== null && lateBy(destT, hhmm) >= 0)) {
         now = 'Arrived at ' + esc(dest.name) + ' ' + esc(destT);
-        sub = title + '.' + (late > 1 ? ' <span class="late">' + late + ' min late.</span>' : '');
+        sub = title + '.' + (late > 1 ? ' <span class="late">' + late + ' min late.</span>' : '') + (late >= REPAY_MIN ? REPAY : '');
       } else if (k < oi) {
         // Not at our station yet: say where it is on the way to us, so we know if it's running late
         var bt = tExp(board);
@@ -695,7 +746,47 @@
     trkSave(); trkLoad(); trkTimer = setInterval(trkLoad, 60 * 1000);
   })();
 
-  loadTrains(); setInterval(loadTrains, 2 * 60 * 1000);
+  loadTrains(); setInterval(loadTrains, 2 * 60 * 1000); wakers.push(loadTrains, trkLoad);
+
+  // Tube and Elizabeth line status for the lines at Liverpool Street, straight from TfL's open data (no key).
+  var TU_LINES = { central: ['Central', '#e32017'], circle: ['Circle', '#ffd300'], 'hammersmith-city': ['Hammersmith & City', '#f3a9bb'],
+    metropolitan: ['Metropolitan', '#9b0056'], elizabeth: ['Elizabeth line', '#6950a1'], weaver: ['Weaver (Overground)', '#823a62'] };
+  // TfL severity numbers: 10 good service, 18 no issues; 19 information and 20 service closed (overnight) aren't faults
+  function tuKind(n) { return n === 10 || n === 18 ? 'good' : n === 19 || n === 20 ? 'quiet' : n === 9 || n === 7 || n === 14 ? 'late' : 'bad'; }
+  function tuUniq(a) { return a.filter(function (v, i) { return v && a.indexOf(v) === i; }); }
+  function tuRows(lines) {
+    var bad = 0, shut = 0, html = '';
+    Object.keys(TU_LINES).forEach(function (id) {
+      var l = lines.filter(function (x) { return x.id === id; })[0], sts = (l && l.lineStatuses) || [];
+      var trouble = sts.filter(function (s) { var k = tuKind(s.statusSeverity); return k === 'late' || k === 'bad'; });
+      var names = tuUniq((trouble.length ? trouble : sts.slice(0, 1)).map(function (s) { return s.statusSeverityDescription; }));
+      var why = tuUniq(trouble.map(function (s) { return (s.reason || '').replace(/^[^:]{0,30}\bline\s*:\s*/i, '').replace(/\s+/g, ' ').trim(); }));
+      var cls = trouble.some(function (s) { return tuKind(s.statusSeverity) === 'bad'; }) ? 'bad' : trouble.length ? 'late' : '';
+      if (trouble.length) bad++;
+      else if (sts.length && tuKind(sts[0].statusSeverity) === 'quiet') shut++;
+      html += '<div class="tu-row"><span class="tu-bar" style="background:' + TU_LINES[id][1] + '"></span>' +
+        '<span class="rd-txt"><b>' + esc(TU_LINES[id][0]) + '</b>' + why.map(function (w) { return '<span>' + esc(w) + '</span>'; }).join('') + '</span>' +
+        '<span class="tr-st ' + cls + '">' + esc(names.join(' · ') || 'No information') + '</span></div>';
+    });
+    return { html: html, bad: bad, shut: shut };
+  }
+  function loadTube() {
+    getJson('https://api.tfl.gov.uk/Line/' + Object.keys(TU_LINES).join(',') + '/Status')
+      .then(function (lines) {
+        var t = tuRows(lines), pill = document.getElementById('tu-sum');
+        pill.textContent = t.bad ? t.bad + (t.bad === 1 ? ' line disrupted' : ' lines disrupted')
+          : t.shut === Object.keys(TU_LINES).length ? 'Closed for the night' : 'Good service';
+        pill.className = 'rd-sum' + (t.bad ? ' warn' : '');
+        document.getElementById('tu-list').innerHTML = t.html;
+        document.getElementById('tu-foot').textContent = 'Powered by TfL Open Data · updated ' +
+          new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      })
+      .catch(function () {
+        document.getElementById('tu-sum').textContent = 'Unavailable';
+        document.getElementById('tu-list').innerHTML = "<p class=\"tr-empty\">Couldn't reach TfL for the Tube status.</p>";
+      });
+  }
+  loadTube(); setInterval(loadTube, 5 * 60 * 1000); wakers.push(loadTube);
 
   // Station board: arrivals or departures at Kelvedon or Liverpool Street, styled like the
   // dot-matrix displays on the platform. All trains, not just the direct Kelvedon <-> London ones.
@@ -763,7 +854,7 @@
     loadBoard();
   });
   bdMd.forEach(function (b) { b.addEventListener('click', function () { bdMode = b.dataset.mode; loadBoard(); }); });
-  loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000);
+  loadBoard(); setInterval(loadBoard, 60 * 1000); setInterval(bdTick, 1000); wakers.push(loadBoard);
 
   // polls it every 15 minutes (it needs a client secret, so the browser can't) and writes data/fuel.json.
   // The Defender and Kia views rank forecourts by what a fill-up really costs: the pump price
@@ -853,7 +944,7 @@
       renderFuel();
     });
   });
-  loadFuel(); setInterval(loadFuel, 10 * 60 * 1000);
+  loadFuel(); setInterval(loadFuel, 10 * 60 * 1000); wakers.push(loadFuel);
 
   // Road closures near home, published by the family's roads monitor.
   var RD_SHOW = 5, rdView = 'home', rdData = null;
@@ -908,7 +999,8 @@
       '<span>' + esc(rdWhen(c, now)) + '</span></span>' +
       '<span class="rd-mi">' + (rdView === 'home' ? c.miles + ' mi' : '') + '</span></div>';
   }
-  // TomTom delays on the A12 (Chelmsford to Ardleigh) and A120 (Braintree to Marks Tey), commute hours only.
+  // TomTom delays on the A12 (Chelmsford to Ardleigh), the A120 (Braintree to Marks Tey) and any road by
+  // Freeport / Galleys Corner in Braintree, commute hours only.
   function rdDelays() { return (rdData.traffic && rdData.traffic.active && rdData.traffic.items) || []; }
   function rdDelayGroup(items, now) {
     if (!items.length) return '';
@@ -956,7 +1048,7 @@
     var tr = rdData.traffic, trNote = '';
     if (rdView === 'home' && tr) {
       trNote = tr.error ? ' · delay check failed (' + tr.error + ')'
-        : tr.active ? ' · delays from TomTom, A12 Chelmsford–Ardleigh and A120 Braintree–Marks Tey'
+        : tr.active ? ' · delays from TomTom, A12 Chelmsford–Ardleigh, A120 Braintree–Marks Tey and the roads around Freeport'
         : ' · delays are only checked ' + tr.windows.replace(/,/g, ' and ').replace(/-/g, '–');
     }
     document.getElementById('rd-foot').textContent = 'National Highways · updated ' + rdTime(upd) + trNote +
@@ -974,7 +1066,7 @@
   rdButtons.forEach(function (b) {
     b.addEventListener('click', function () { rdView = b.dataset.view; renderRoads(); });
   });
-  loadRoads(); setInterval(loadRoads, 5 * 60 * 1000);
+  loadRoads(); setInterval(loadRoads, 5 * 60 * 1000); wakers.push(loadRoads);
 
 
 })();
