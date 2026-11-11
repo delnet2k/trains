@@ -212,6 +212,14 @@
   }
   .roads { grid-column: span 6; }
   .fuel { grid-column: span 6; }
+  .roadworks { grid-column: span 6; }
+  .rw-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
+  .rw-what { justify-self: start; font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #3b4252; color: #fff; text-align: center; line-height: 1.25; }
+  .rw-what.r0 { background: var(--tomato); }
+  .rw-what.r2 { background: #b8860b; }
+  .rw-what.r1, .rw-what.r3 { background: #1f3f8f; }
+  .rw-txt a { color: inherit; text-decoration: none; }
+  .rw-txt a:hover { text-decoration: underline; }
   .fu-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--edge); }
   .fu-p { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
   .fu-p small { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 1px; }
@@ -713,10 +721,12 @@
     bdSt.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.crs === crs ? 'true' : 'false'); });
     bdMd.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false'); });
     var key = crs + mode + bdOnly; bdLoading = key;
-    railGet(mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/10' + (arr ? '' : '?expand=true'))
+    railGet(mode + '/' + crs + (bdOnly ? (arr ? '/from/' : '/to/') + BD_OTHER[crs] : '') + '/' + (crs === 'LST' && !bdOnly && !arr ? 25 : 10) + (arr ? '' : '?expand=true'))
       .then(function (d) {
         if (bdLoading !== key) return;
         var list = (d.trainServices || []).concat(d.busServices || []);
+        // Liverpool Street departures: leave out the Elizabeth line (XR, or TL from its TfL Rail days)
+        if (crs === 'LST' && !arr) list = list.filter(function (s) { return s.operatorCode !== 'XR' && s.operatorCode !== 'TL'; }).slice(0, 10);
         var html = '<div class="bd-row hd"><span>Time</span><span>' + (arr ? 'From' : 'Destination') + '</span><span class="bd-plat">Plat</span><span class="bd-exp"><span class="bd-long">Expected</span><span class="bd-short">Exp</span></span></div>';
         list.forEach(function (s, i) {
           var t = arr ? s.sta : s.std, e = arr ? s.eta : s.etd;
@@ -884,6 +894,12 @@
     var a = name(m[1]), b = m[2] ? name(m[2]) : '';
     return a && b ? a + ' → ' + b : a || b;
   }
+  // Replace "J25" / "Junction 25" in TomTom text with the place name (A12 only; other roads left alone)
+  function rdNameJcts(text, road) {
+    var names = JCT_NAMES[road];
+    if (!names || !text) return text || '';
+    return text.replace(/\b(?:jct|junction|j)\.?\s*(\d+[ab]?)\b/gi, function (all, j) { return names[j.toUpperCase()] || all; });
+  }
   function rdRow(c, now) {
     var text = c.summary.replace(/\s*\(MP[^)]*\)?/g, '').replace(/\s+/g, ' ').trim();
     var places = rdPlaces(c);
@@ -891,6 +907,17 @@
       '<span class="rd-txt"><b>' + esc(text) + '</b>' + (places ? '<em class="rd-where">' + esc(places) + '</em>' : '') +
       '<span>' + esc(rdWhen(c, now)) + '</span></span>' +
       '<span class="rd-mi">' + (rdView === 'home' ? c.miles + ' mi' : '') + '</span></div>';
+  }
+  // TomTom delays on the A12 (Chelmsford to Ardleigh) and A120 (Braintree to Marks Tey), commute hours only.
+  function rdDelays() { return (rdData.traffic && rdData.traffic.active && rdData.traffic.items) || []; }
+  function rdDelayGroup(items, now) {
+    if (!items.length) return '';
+    return '<p class="rd-group">Delays now</p>' + items.map(function (c) {
+      return '<div class="rd-row live"><span class="rd-road">' + esc(c.road) + '</span>' +
+        '<span class="rd-txt"><b>' + esc(rdNameJcts(c.summary, c.road)) + '</b><em class="rd-where">' + esc(rdNameJcts(c.where, c.road)) + '</em>' +
+        '<span>' + (c.start ? 'Since ' + esc(rdTime(new Date(c.start))) : '') + '</span></span>' +
+        '<span class="rd-mi">' + c.miles + ' mi</span></div>';
+    }).join('');
   }
   function rdGroup(title, items, now, id) {
     if (!items.length) return '';
@@ -911,9 +938,12 @@
     if (rdView === 'home') {
       var live = mine.filter(function (c) { return rdIsNow(c, now); });
       var soon = mine.filter(function (c) { return !rdIsNow(c, now); });
+      var delays = rdDelays();
       bad = live.length;
-      sum.textContent = bad ? bad + (bad === 1 ? ' closure now' : ' closures now') : 'All clear now';
-      html = rdGroup('Now', live, now, 'rd-x1') + rdGroup('Coming up', soon, now, 'rd-x2');
+      sum.textContent = bad ? bad + (bad === 1 ? ' closure now' : ' closures now')
+        : delays.length ? delays.length + (delays.length === 1 ? ' delay now' : ' delays now') : 'All clear now';
+      if (delays.length) bad = bad || delays.length;
+      html = rdDelayGroup(delays, now) + rdGroup('Now', live, now, 'rd-x1') + rdGroup('Coming up', soon, now, 'rd-x2');
       if (!html) html = '<p class="tr-empty">No closures on the A12 or A120 near us this week.</p>';
     }
     sum.className = 'rd-sum' + (bad ? ' warn' : '');
@@ -923,7 +953,13 @@
       btn.addEventListener('click', function () { document.getElementById(btn.dataset.for).hidden = false; btn.remove(); });
     });
     var upd = new Date(rdData.updated), stale = (now - upd) > 90 * 60 * 1000;
-    document.getElementById('rd-foot').textContent = 'National Highways · updated ' + rdTime(upd) +
+    var tr = rdData.traffic, trNote = '';
+    if (rdView === 'home' && tr) {
+      trNote = tr.error ? ' · delay check failed (' + tr.error + ')'
+        : tr.active ? ' · delays from TomTom, A12 Chelmsford–Ardleigh and A120 Braintree–Marks Tey'
+        : ' · delays are only checked ' + tr.windows.replace(/,/g, ' and ').replace(/-/g, '–');
+    }
+    document.getElementById('rd-foot').textContent = 'National Highways · updated ' + rdTime(upd) + trNote +
       (stale ? ' · may be out of date' : '');
   }
   function loadRoads() {
@@ -939,6 +975,7 @@
     b.addEventListener('click', function () { rdView = b.dataset.view; renderRoads(); });
   });
   loadRoads(); setInterval(loadRoads, 5 * 60 * 1000);
+
 
 })();
 </script>
