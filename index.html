@@ -219,6 +219,7 @@
   .tr-len { white-space: nowrap; }
   .trk-sub a, .tr-setup a { color: var(--accent); font-weight: 600; }
   .tr-setup button { padding: 0; }
+  .tr-setup input[hidden] { display: none; }
   .tr-setup input { display: block; width: 100%; max-width: 520px; margin-top: 8px; font: inherit; font-size: 0.8rem; padding: 8px 10px;
     border: 1px solid var(--edge); border-radius: 2px; background: var(--surface-2); color: var(--ink); }
   .tube { grid-column: span 6; }
@@ -419,6 +420,9 @@
     try { var k = (localStorage.getItem('trains-rail') || '').split('.'); return k.length === 3 ? { dep: k[0], arr: k[1], svc: k[2] } : null; }
     catch (e) { return null; }
   });
+  // Until this phone has been set up it has no rail keys, and the free fallback is rarely up: say so
+  var railSet = false;
+  try { railSet = (localStorage.getItem('trains-rail') || '').split('.').length === 3; } catch (e) {}
   function getJson(u, headers) {
     return fetch(u, { cache: 'no-store', headers: headers || {} })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
@@ -553,7 +557,8 @@
       })
       .catch(function () {
         if (ROUTES[trDir] !== r) return;
-        document.getElementById('tr-list').innerHTML = "<p class=\"tr-empty\">Couldn't reach the train times service.</p>";
+        document.getElementById('tr-list').innerHTML = '<p class="tr-empty">' + (railSet ? "Couldn't reach the train times service."
+          : 'Train times need this phone setting up once: paste the family setup link in the box below.') + '</p>';
       });
   }
   trButtons.forEach(function (b) {
@@ -580,13 +585,13 @@
     if (code) trkCfg = { control: code };
     var foot = document.getElementById('tr-foot'), note = document.createElement('p');
     note.className = 'tr-foot tr-setup';
-    note.textContent = code ? 'Phone alerts are on for this phone. ' : 'Tracking works on this page. Phone alerts need the family setup link. ';
+    note.textContent = code ? 'Phone alerts are on for this phone. ' : 'Train times and phone alerts need the family setup link, once on each phone. ';
     if (m) note.textContent = 'Phone alerts set up for this phone. Tap Track on a train to get alerts. ';
     foot.parentNode.insertBefore(note, foot.nextSibling);
     // An app on the home screen keeps its own storage, so the link can be pasted in here too
     var btn = document.createElement('button'), box = document.createElement('input');
     btn.type = 'button'; btn.className = 'rd-more'; btn.textContent = code ? 'Set up again' : 'Set up this phone';
-    box.type = 'text'; box.hidden = true; box.placeholder = 'Paste the family setup link here';
+    box.type = 'text'; box.hidden = !!code; box.placeholder = 'Paste the family setup link here';
     box.setAttribute('aria-label', 'Family setup link'); box.autocapitalize = 'off'; box.autocomplete = 'off'; box.spellcheck = false;
     btn.addEventListener('click', function () { box.hidden = false; box.focus(); });
     box.addEventListener('input', function () {
@@ -843,7 +848,7 @@
         bdTick();
       })
       .catch(function () {
-        if (bdLoading === key) document.getElementById('board').innerHTML = '<div class="bd-row"><span></span><span>Board unavailable</span></div>';
+        if (bdLoading === key) document.getElementById('board').innerHTML = '<div class="bd-row"><span></span><span>' + (railSet ? 'Board unavailable' : 'Set up this phone to see the trains (box below)') + '</span></div>';
       });
   }
   function bdTick() { var c = document.getElementById('bd-clock'); if (c) c.textContent = new Date().toTimeString().slice(0, 8); }
