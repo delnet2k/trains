@@ -1008,8 +1008,8 @@
       '<span>' + esc(rdWhen(c, now)) + '</span></span>' +
       '<span class="rd-mi">' + (rdView === 'home' ? c.miles + ' mi' : '') + '</span></div>';
   }
-  // TomTom delays on the A12 (Chelmsford to Ardleigh), the A120 (Braintree to Marks Tey) and any road by
-  // Freeport / Galleys Corner in Braintree, commute hours only.
+  // TomTom delays on the A12 (Chelmsford to Ardleigh), the A120 (Braintree to Marks Tey), any road by
+  // Freeport / Galleys Corner in Braintree and other A-roads within 15 miles (5+ min queues), 06:00-22:00.
   function rdDelays() { return (rdData.traffic && rdData.traffic.active && rdData.traffic.items) || []; }
   function rdDelayGroup(items, now) {
     if (!items.length) return '';
@@ -1057,7 +1057,7 @@
     var tr = rdData.traffic, trNote = '';
     if (rdView === 'home' && tr) {
       trNote = tr.error ? ' · delay check failed (' + tr.error + ')'
-        : tr.active ? ' · delays from TomTom, A12 Chelmsford–Ardleigh, A120 Braintree–Marks Tey and the roads around Freeport'
+        : tr.active ? ' · delays from TomTom, A-roads within ' + rdData.radius_miles + ' miles'
         : ' · delays are only checked ' + tr.windows.replace(/,/g, ' and ').replace(/-/g, '–');
     }
     document.getElementById('rd-foot').textContent = 'National Highways · updated ' + rdTime(upd) + trNote + ' · tap a place for the map' +
