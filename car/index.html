@@ -17,12 +17,11 @@
   main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 40px; }
   h1 { margin: 0 0 20px; font-size: 26px; font-weight: 650; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-  a.tile { display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; padding: 20px;
+  a.tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 170px; padding: 20px;
            background: var(--tile); border: 1px solid var(--edge); border-radius: 16px; color: inherit; text-decoration: none; }
   a.tile:active { transform: scale(.98); border-color: var(--accent); }
-  .name { font-size: 26px; font-weight: 700; }
-  .site { color: var(--muted); font-size: 15px; }
-  .bar { width: 40px; height: 5px; border-radius: 3px; background: var(--accent); }
+  .logo { width: 96px; height: 96px; border-radius: 22px; object-fit: cover; display: block; }
+  .name { font-size: 22px; font-weight: 650; text-align: center; }
 </style>
 </head>
 <body>
@@ -31,23 +30,22 @@
   <div class="grid" id="grid"></div>
 </main>
 <script>
-  // Edit this list to add or remove services.
+  // Edit this list to add or remove services: name, link, logo file in img/.
   var SERVICES = [
-    ['Netflix', 'https://www.netflix.com/'],
-    ['Prime Video', 'https://www.primevideo.com/'],
-    ['Disney+', 'https://www.disneyplus.com/'],
-    ['Apple TV', 'https://tv.apple.com/'],
-    ['YouTube', 'https://www.youtube.com/'],
-    ['BBC iPlayer', 'https://www.bbc.co.uk/iplayer'],
-    ['ITVX', 'https://www.itv.com/'],
-    ['Channel 4', 'https://www.channel4.com/'],
-    ['NOW', 'https://www.nowtv.com/watch/home'],
-    ['Paramount+', 'https://www.paramountplus.com/gb/'],
-    ['HBO Max', 'https://www.hbomax.com/']
+    ['Netflix', 'https://www.netflix.com/', 'netflix.jpg'],
+    ['Prime Video', 'https://www.primevideo.com/', 'primevideo.png'],
+    ['Disney+', 'https://www.disneyplus.com/', 'disneyplus.png'],
+    ['Apple TV', 'https://tv.apple.com/', 'appletv.png'],
+    ['YouTube', 'https://www.youtube.com/', 'youtube.png'],
+    ['BBC iPlayer', 'https://www.bbc.co.uk/iplayer', 'iplayer.png'],
+    ['ITVX', 'https://www.itv.com/', 'itv.png'],
+    ['Channel 4', 'https://www.channel4.com/', 'channel4.png'],
+    ['NOW', 'https://www.nowtv.com/watch/home', 'nowtv.png'],
+    ['Paramount+', 'https://www.paramountplus.com/gb/', 'paramountplus.jpg'],
+    ['HBO Max', 'https://www.hbomax.com/', 'hbomax.jpg']
   ];
   document.getElementById('grid').innerHTML = SERVICES.map(function (s) {
-    var host = s[1].replace(/^https:\/\/(www\.)?/, '').replace(/\/.*$/, '');
-    return '<a class="tile" href="' + s[1] + '"><span class="bar"></span><span class="name">' + s[0] + '</span><span class="site">' + host + '</span></a>';
+    return '<a class="tile" href="' + s[1] + '"><img class="logo" src="img/' + s[2] + '" alt=""><span class="name">' + s[0] + '</span></a>';
   }).join('');
 </script>
 </body>
