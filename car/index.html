@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Car Streaming</title>
+<style>
+  /* Launcher for the Tesla browser: one bookmark, big tap targets. Self-contained so it loads fast in the car. */
+  :root { --bg: #f6f2ef; --tile: #ffffff; --ink: #211d1b; --muted: #6b625d; --edge: #e4dcd6; --accent: #c2410c; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #161312; --tile: #241f1d; --ink: #f4eeea; --muted: #a89d97; --edge: #352e2b; --accent: #fb923c; }
+  }
+  :root[data-theme="dark"] { --bg: #161312; --tile: #241f1d; --ink: #f4eeea; --muted: #a89d97; --edge: #352e2b; --accent: #fb923c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { margin: 0 0 20px; font-size: 26px; font-weight: 650; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  a.tile { display: flex; flex-direction: column; justify-content: space-between; min-height: 130px; padding: 20px;
+           background: var(--tile); border: 1px solid var(--edge); border-radius: 16px; color: inherit; text-decoration: none; }
+  a.tile:active { transform: scale(.98); border-color: var(--accent); }
+  .name { font-size: 26px; font-weight: 700; }
+  .site { color: var(--muted); font-size: 15px; }
+  .bar { width: 40px; height: 5px; border-radius: 3px; background: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Watch</h1>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+  // Edit this list to add or remove services.
+  var SERVICES = [
+    ['Netflix', 'https://www.netflix.com/'],
+    ['Prime Video', 'https://www.primevideo.com/'],
+    ['Disney+', 'https://www.disneyplus.com/'],
+    ['Apple TV', 'https://tv.apple.com/'],
+    ['YouTube', 'https://www.youtube.com/'],
+    ['BBC iPlayer', 'https://www.bbc.co.uk/iplayer'],
+    ['ITVX', 'https://www.itv.com/'],
+    ['Channel 4', 'https://www.channel4.com/'],
+    ['NOW', 'https://www.nowtv.com/watch/home'],
+    ['Paramount+', 'https://www.paramountplus.com/gb/']
+  ];
+  document.getElementById('grid').innerHTML = SERVICES.map(function (s) {
+    var host = s[1].replace(/^https:\/\/(www\.)?/, '').replace(/\/.*$/, '');
+    return '<a class="tile" href="' + s[1] + '"><span class="bar"></span><span class="name">' + s[0] + '</span><span class="site">' + host + '</span></a>';
+  }).join('');
+</script>
+</body>
+</html>
